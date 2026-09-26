@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Mp3Organizer/Mp3Organizer.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/Mp3Organizer.Tests/">
+    <Project Path="tests/Mp3Organizer.Tests/Tests.csproj" />
+  </Folder>
+</Solution>
