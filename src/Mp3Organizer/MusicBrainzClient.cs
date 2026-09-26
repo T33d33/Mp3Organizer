@@ -34,7 +34,7 @@ public sealed class MusicBrainzClient(IdentificationHttp transport, string userA
                         if (!disc.TryGetProperty("tracks",out var tracks)) continue;
                         foreach (var track in tracks.EnumerateArray())
                             if (track.TryGetProperty("recording",out var trackRecording) && Text(trackRecording,"id") == recordingId)
-                                releases.Add(new(id, Text(release,"title"), Artist(release), year, Number(track,"position"), Number(disc,"position"), Text(release,"status"), compilation));
+                                releases.Add(new(id, Text(release,"title"), Artist(release), year, Number(track,"position"), Number(disc,"position"), Text(release,"status"), compilation,group.ValueKind==JsonValueKind.Object?Text(group,"id"):"",group.ValueKind==JsonValueKind.Object?AlbumYearClient.Year(Text(group,"first-release-date")):0));
                     }
                 }
                 var total = root.GetProperty("release-count").GetInt32();

@@ -9,6 +9,10 @@ public static partial class TestRunner
     private static string root = "";
     public static int Main(string[] args)
     {
+        if(args.Length==2&&args[0]=="--progress-probe")
+        {
+            using var progress=new ProgressRepository(args[1]);return progress.All().Count==1&&progress.All()[0].Status==ProcessingStatus.Ready?0:1;
+        }
         if(args.Length==3&&args[0]=="--cache-probe")
         {
             var value=new IdentificationCache(args[1],args[2]).Get("chromaprint-v1-length120:"+new string('A',64));
@@ -19,7 +23,7 @@ public static partial class TestRunner
         Environment.SetEnvironmentVariable("MP3ORGANIZER_WORKSPACE",Path.Combine(root,"workspace"));
         var tests = new Action[]
         {
-            NavigateBackAcrossFolders, BackspaceEditsInsteadOfNavigating, EveryPromptHasPathContext, NavigationBackAndEdit, NavigationFirstFieldReturnsToSelection, NavigationFileContextAndPersistence, ArtistAlbumTrackFilename, GenericFilenameTrackHints, GenericFilenameInteractiveDefault, CupheadTrackNumbers, TrackHintWithReliableTitle, InteractiveTrackHintAccepted, PartialOnlinePreservesFields, PartialFieldPriorityAndPlaceholders, FieldSourcesReport, IdentificationStageProgress, DiagnosticOnlineConditions, DiagnosticFpcalcLocation, DoctorChecksWorkspaceOnly, DoctorFailuresReported, PlaceholderVariants, KingpinOfflineAndReport, KingpinOnlineAndFailure, KingpinInteractiveAndManualPriority, PlaceholderOldCacheInvalidated, NormalizeWhitespace, NormalizeUnicode, PreservePunctuation, NormalizeBlank,
+            ProgressSeparateProcess, ProgressRecorderIntegration, ProgressBackupFailureSafe, ProgressLimitAndRestart, ProgressProcessedNeverRepeated, ProgressScanPreservesAndSkipsReads, ProgressResetFileAndFolder, ProgressErrorsAndReviewReset, ProgressBackupBeforeReset, ProgressRenameIdentityAndDuplicates, ProgressEachFileCommitted, ProgressCliAndSourceSafety, NavigateBackAcrossFolders, BackspaceEditsInsteadOfNavigating, EveryPromptHasPathContext, NavigationBackAndEdit, NavigationFirstFieldReturnsToSelection, NavigationFileContextAndPersistence, ArtistAlbumTrackFilename, GenericFilenameTrackHints, GenericFilenameInteractiveDefault, CupheadTrackNumbers, TrackHintWithReliableTitle, InteractiveTrackHintAccepted, PartialOnlinePreservesFields, PartialFieldPriorityAndPlaceholders, FieldSourcesReport, IdentificationStageProgress, DiagnosticOnlineConditions, DiagnosticFpcalcLocation, DoctorChecksWorkspaceOnly, DoctorFailuresReported, PlaceholderVariants, KingpinOfflineAndReport, KingpinOnlineAndFailure, KingpinInteractiveAndManualPriority, PlaceholderOldCacheInvalidated, NormalizeWhitespace, NormalizeUnicode, PreservePunctuation, NormalizeBlank,
             DuplicateBoundary, DuplicateNoChains, DuplicateMissingTags, DuplicateDifferentArtist,
             NonIdenticalRetained, IdenticalSelected, StableDuplicateOrdering,
             SafeNames, CompilationPath, LoosePath, DiscPath,
@@ -185,7 +189,7 @@ public static partial class TestRunner
         foreach(var list in p.Playlists)
         {
             var path=Path.Combine(f.Target,list.RelativePath); var bytes=File.ReadAllBytes(path); True(!(bytes.Length>=3 && bytes[0]==239 && bytes[1]==187 && bytes[2]==191));
-            foreach(var line in File.ReadAllLines(path).Where(x=>x.Length>0 && !x.StartsWith('#'))) { True(!Path.IsPathRooted(line)); True(File.Exists(Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path)!,line)))); }
+            foreach(var line in File.ReadAllLines(path).Where(x=>x.Length>0 && !x.StartsWith('#'))) { True(!Path.IsPathRooted(line)); True(!line.Contains('/')); True(line.StartsWith(@"..\..\")); True(File.Exists(Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path)!,line)))); }
         }
     }
     static void CsvEscaping() { var f=Fixture(); new CsvReportWriter().Write(f.Reports,f.Source,[Row(title:"A, \"quote\"\nline")],null); True(File.ReadAllText(Path.Combine(f.Reports,"library.csv")).Contains("\"A, \"\"quote\"\"\nline\"")); }

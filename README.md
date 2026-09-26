@@ -1,25 +1,58 @@
-# Mp3Organizer — .NET 10 / TagLibSharp 2.3.0
+# Mp3Organizer — quick start
 
-An immutable-source music library analyzer and copy-based organizer. The real source `\\192.168.0.124\Public\mp3` has **not been accessed or scanned** during development.
+**[Complete command guide: configuration, every command, examples and troubleshooting](COMMANDS.md)**
 
-Persistent SQLite caching and manual corrections are available. See [WORKFLOW.md](WORKFLOW.md) for architecture, schemas and commands. Optional acoustic identification is also available. See [IDENTIFICATION.md](IDENTIFICATION.md) for architecture, Chromaprint setup, environment variables, cache behavior, and small-folder commands. Online lookup requires explicit `--online`; ordinary planning reuses cached identifications and remains offline.
-
-## Run the supplied build
-
-From this directory in PowerShell:
+Use the latest build directly with `dotnet`, rather than an older `.cmd` launcher. Start each PowerShell session with:
 
 ```powershell
-.\Mp3Organizer.cmd --help
-.\Mp3Organizer.cmd analyze "C:\Music-test" --reports "C:\Music-test-reports"
-.\Mp3Organizer.cmd plan "C:\Music-test" "E:\MP3-organized-test" --reports "C:\Music-test-reports"
-.\Mp3Organizer.cmd apply "C:\Music-test" "E:\MP3-organized-test" --reports "C:\Music-test-reports" --dry-run
-.\Mp3Organizer.cmd apply "C:\Music-test" "E:\MP3-organized-test" --reports "C:\Music-test-reports"
-.\Mp3Organizer.cmd playlists "E:\MP3-organized-test"
+$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-progress-state\Mp3Organizer.dll'
+$source = 'E:\Mp3-Ai-test'
+$target = 'E:\Mp3-Ai-test-organized'
+$workspace = 'E:\Mp3-Ai-test-workspace'
+$reports = 'E:\Mp3-Ai-test-reports'
 ```
 
-These are examples for folders you choose and populate yourself. They were not executed against any personal library. Instead of the launcher, use `dotnet artifacts/Mp3Organizer.dll` with the same arguments.
+Configure online identification using your AcoustID **application key**, actual fpcalc executable path and real MusicBrainz contact:
 
-`apply` optionally accepts `--plan "absolute/path/to/copy-plan.json"`. Without it, the latest saved plan for the exact source/target pair under `--reports` is selected. Reports default to `reports` under the working directory. Keep reports outside both libraries. Exit codes: 0 success; 1 error; 2 missing command; 3 incomplete analysis or blocking plan conflicts.
+```powershell
+$env:ACOUSTID_API_KEY = 'YOUR_ACOUSTID_APPLICATION_KEY'
+$env:CHROMAPRINT_FPCALC = 'C:\Tools\Chromaprint\fpcalc.exe'
+$env:MP3ORGANIZER_CONTACT = 'your-email@example.com'
+
+dotnet $dll doctor --workspace $workspace
+```
+
+Obtain the application key through the [official AcoustID documentation](https://acoustid.org/webservice); obtain fpcalc from [Chromaprint](https://acoustid.org/chromaprint). The [complete guide](COMMANDS.md) explains persistent configuration, MusicBrainz setup, diagnostics and offline use. These example values must be replaced before online use.
+
+Recommended incremental workflow:
+
+```powershell
+dotnet $dll scan $source --workspace $workspace
+dotnet $dll analyze --limit 200 --workspace $workspace --online --reports $reports
+dotnet $dll status --workspace $workspace
+```
+
+Repeat `analyze --limit 200` next session with the same workspace to continue. Do not reset progress between batches. Rescan when the collection changes. Online access requires explicit `--online`; use `--offline` for local/cached analysis.
+
+Review uncertain entries, then plan and simulate:
+
+```powershell
+dotnet $dll resolve $source --workspace $workspace --reports $reports --only-unresolved
+dotnet $dll plan $source $target --workspace $workspace --reports $reports
+dotnet $dll apply $source $target --workspace $workspace --reports $reports --dry-run
+```
+
+After inspecting the plan, explicitly copy selected files with:
+
+```powershell
+dotnet $dll apply $source $target --workspace $workspace --reports $reports
+```
+
+Full-source resolve/plan are not limited to the last analysis batch. The source is immutable; apply writes only organized target copies/control files. Use `--edit-manual` to revisit completed decisions. Controls are **Enter = accept, Backspace = delete text, Alt+Left = previous, Esc = skip/abort folder**.
+
+These examples have not been executed against your library while writing this documentation. Keep workspace and reports outside both source and target.
+
+Further references: [all commands](COMMANDS.md), [incremental progress/schema](PROGRESS.md), [identification details](IDENTIFICATION.md), [manual/cache internals](WORKFLOW.md). Historical build paths in older notes should not replace the current DLL path above.
 
 ## Build and test
 
@@ -36,11 +69,11 @@ The tests use a dependency-free executable test runner with assertions and nonze
 This environment denied access to the user-level NuGet configuration and rejected an escalation request. Both projects were therefore compiled with the installed .NET 10 Roslyn compiler and reference assemblies, using the already installed TagLibSharp package, without accessing that configuration or downloading dependencies:
 
 ```powershell
-.\build-offline.ps1
-dotnet artifacts/Mp3Organizer.Tests.dll "path/to/test-scratch"
+.\build-offline.ps1 -OutputDirectory artifacts-progress-state
+dotnet artifacts-progress-state/Mp3Organizer.Tests.dll "path/to/test-scratch"
 ```
 
-The offline script accepts `-TagLibDll` for a different installed TagLibSharp 2.3.0 DLL path. It treats warnings as errors. Prebuilt application and tests are in `artifacts`. Standard NuGet/MSBuild restore remains unverified in this restricted environment.
+The offline script accepts `-TagLibDll` for a different installed TagLibSharp 2.3.0 DLL path. It treats warnings as errors. The current prebuilt application and tests are in `artifacts-progress-state`. Standard NuGet/MSBuild restore remains unverified in this restricted environment.
 
 ## Safety and execution
 

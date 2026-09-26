@@ -15,6 +15,14 @@ public sealed record IdentificationEvidence
     public string AcoustId { get; init; } = "";
     public string RecordingId { get; init; } = "";
     public string ReleaseId { get; init; } = "";
+    public double RecognitionConfidence {get;init;}
+    public bool AutoRecognized {get;init;}
+    public string[] ReviewReasons {get;init;}=[];
+    public List<RecognitionCandidate> Candidates {get;init;}=[];
+    public string YearSource {get;init;}="";
+    public double YearConfidence {get;init;}
+    public bool YearEnriched {get;init;}
+    public string AlbumGroupId {get;init;}="";
     public bool ConfidentRecording { get; init; }
     public string Status { get; init; } = "TagsAccepted";
     public string ReviewReason { get; init; } = "";
@@ -30,7 +38,7 @@ public sealed record AudioFingerprint(double Duration, string Fingerprint, bool 
 public sealed record AcousticCandidate(string AcoustId, double Score, string RecordingId);
 public sealed record AcousticLookup(List<AcousticCandidate> Candidates, string Error = "",bool CacheHit=false);
 public sealed record RecordingInfo(string Id, string Artist, string Title, double Duration, string Disambiguation = "");
-public sealed record ReleaseInfo(string Id, string Album, string AlbumArtist, uint Year, uint Track, uint Disc, string Status = "Official", bool Compilation = false);
+public sealed record ReleaseInfo(string Id, string Album, string AlbumArtist, uint Year, uint Track, uint Disc, string Status = "Official", bool Compilation = false, string GroupId="", uint OriginalYear=0);
 public sealed record RecordingLookup(RecordingInfo? Recording, List<ReleaseInfo> Releases, string Error = "",bool CacheHit=false);
 public interface IAudioFingerprintService { Task<AudioFingerprint?> FingerprintAsync(AudioMetadata file, bool allowCompute, CancellationToken ct = default); }
 public interface IAcoustIdClient { Task<AcousticLookup> LookupAsync(AudioFingerprint fingerprint, bool online, CancellationToken ct = default); }

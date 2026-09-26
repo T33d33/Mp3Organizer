@@ -100,7 +100,7 @@ public sealed class PlaylistBuilder
         }
         void Add(string path, IEnumerable<CopyOperation> rows)
         {
-            var lines = rows.Select(x => Path.GetRelativePath(Path.Combine(Path.GetTempPath(), "playlist-root", Path.GetDirectoryName(path)!), Path.Combine(Path.GetTempPath(), "playlist-root", x.RelativePath)).Replace('\\', '/'));
+            var lines = rows.Select(x => Path.GetRelativePath(Path.Combine(Path.GetTempPath(), "playlist-root", Path.GetDirectoryName(path)!), Path.Combine(Path.GetTempPath(), "playlist-root", x.RelativePath)).Replace('/', '\\'));
             result.Add(new(path, "#EXTM3U\n" + string.Join("\n", lines) + "\n"));
         }
     }

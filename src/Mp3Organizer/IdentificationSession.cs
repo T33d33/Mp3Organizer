@@ -25,6 +25,7 @@ public sealed class IdentificationSession : IDisposable
             new AcoustIdClient(new IdentificationHttp(http,cache,AcoustLimit,Clock),key),
             new MusicBrainzClient(new IdentificationHttp(http,cache,BrainzLimit,Clock),agent), online, online || identifyAll||rebuildFingerprints,progress),cache,online);
         if(workspace!=null){ManualStore=new(workspace,source,target);Resolver=new ManualMetadataResolver(Resolver,ManualStore,refreshIdentification);}
+        Resolver=new YearEnrichmentResolver(Resolver,new AlbumYearClient(new IdentificationHttp(http,cache,BrainzLimit,Clock),cache,agent),online,progress);
     }
     public static List<AudioMetadata> ResolveAll(IReadOnlyList<AudioMetadata> rows, IMetadataResolver resolver, bool identifyAll, Action<string>? progress = null)
     {

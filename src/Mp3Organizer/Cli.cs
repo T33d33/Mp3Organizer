@@ -10,6 +10,7 @@ public static class Program
     public static int Run(string[] args)
     {
         if (args.Length == 0 || args[0] is "--help" or "-h") { Help(); return args.Length == 0 ? 2 : 0; }
+        if(ProgressCommands.Handles(args))return ProgressCommands.Run(args);
         var command = args[0];
         var positionals = new List<string>();
         string reports = Path.GetFullPath("reports");
@@ -98,6 +99,7 @@ public static class Program
                 new InteractiveResolution(identification.ManualStore!,new ResolutionConsole()).Run(rows,onlyUnresolved,editManual);
                 rows=IdentificationSession.ResolveAll(rows,identification.Resolver,false,progress.Write);
             }
+            ProgressResultRecorder.Record(workspace,source,rows);
             progress.Write("Writing reports...");
             var folder = Path.Combine(reports, (command == "identify" ? "identification-" : "analysis-") + Guid.NewGuid().ToString("N"));
             new CsvReportWriter().Write(folder, source, rows, null, scanner.Errors.Concat(rows.Where(x => x.Error != "").Select(x => x.FullPath + ": " + x.Error)));
@@ -129,8 +131,9 @@ public static class Program
         if(savedPlan.ManualFilePath!=""&&!string.Equals(savedPlan.ManualFilePath,Path.Combine(workspace,"manual-resolutions.json"),StringComparison.OrdinalIgnoreCase))throw new IOException("Use the same --workspace as the saved plan, or create a new plan.");
         if(savedPlan.ManualFilePath==""&&File.Exists(Path.Combine(workspace,"manual-resolutions.json")))throw new IOException("Plan predates manual resolution support; create a new plan.");
         new SafeCopyExecutor().Execute(savedPlan, source, target, dryRun);
+        if(!dryRun)ProgressResultRecorder.Record(workspace,source,savedPlan.Operations.Select(x=>x.Metadata),true);
         Console.WriteLine(dryRun ? $"Dry run validated: {savedPlan.Operations.Count(x => x.Action == "Copy")} copies and {savedPlan.Playlists.Count} playlists. No files written." : "Apply completed; source untouched. Managed playlist replacements were backed up.");
         return 0;
     }
-    private static void Help() => Console.WriteLine("Mp3Organizer analyze <source> [--reports <directory>]\nMp3Organizer identify <source> [--identify-all] [--online|--offline]\nMp3Organizer resolve <source> [--only-unresolved] [--edit-manual]\nMp3Organizer doctor [--offline] [--workspace <directory>] [--cache <path>]\nMp3Organizer manual validate\nMp3Organizer plan <source> <target>\nMp3Organizer apply <source> <target> [--plan <copy-plan.json>] [--dry-run]\nMp3Organizer playlists <target>\nShared: --workspace <directory> (default workspace), --reports <directory>\nIdentification: --cache <cache.db>, --rebuild-fingerprints, --refresh-identification (requires --online), --identification-retry-days <days> (default 30).\nOnline identification is opt-in. Manual JSON is authoritative; source files are immutable.");
+    private static void Help() => Console.WriteLine("Mp3Organizer scan <source> [--force] [--workspace <directory>]\nMp3Organizer review [--workspace <directory>] [--write-tags]\nMp3Organizer status [--workspace <directory>]\nMp3Organizer analyze --limit N [--online|--offline] [--write-tags] [--workspace <directory>]\nMp3Organizer reset-file <path> | reset-folder <path> | reset-errors | reset-review | reset-progress | reset-all\nMp3Organizer analyze <source> [--reports <directory>]\nMp3Organizer identify <source> [--identify-all] [--online|--offline]\nMp3Organizer resolve <source> [--only-unresolved] [--edit-manual]\nMp3Organizer doctor [--offline] [--workspace <directory>] [--cache <path>]\nMp3Organizer manual validate\nMp3Organizer plan <source> <target>\nMp3Organizer apply <source> <target> [--plan <copy-plan.json>] [--dry-run]\nMp3Organizer playlists <target>\nShared: --workspace <directory> (default workspace), --reports <directory>\nIdentification: --cache <cache.db>, --rebuild-fingerprints, --refresh-identification (requires --online), --identification-retry-days <days> (default 30).\nOnline identification is opt-in. Manual JSON is authoritative; source files are immutable.");
 }

@@ -12,7 +12,7 @@ public sealed class CachedMetadataResolver(IMetadataResolver inner, Identificati
             context = string.Join(";",neighbors.GroupBy(x=>(MetadataNormalizer.Key(x.Album),x.Year)).OrderBy(x=>x.Key.Item1,StringComparer.Ordinal).ThenBy(x=>x.Key.Year).Select(x=>$"{x.Key}:{x.Count()}"));
             contexts.Add(neighbors,context);
         }
-        var key = "resolution-v7:" + file.Sha256 + ":" + JsonFormat.Serialize(TagMetadata.From(file)) + ":" + context;
+        var key = "resolution-v8:" + file.Sha256 + ":" + JsonFormat.Serialize(TagMetadata.From(file)) + ":" + context;
         var previousStatus=cache.Status(key);
         var saved = !identifyAll&&!cache.RefreshIdentification&&!cache.RebuildFingerprints ? cache.Get(key,!online) : null;
         if(saved != null)
