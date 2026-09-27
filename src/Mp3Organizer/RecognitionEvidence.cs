@@ -7,9 +7,9 @@ public static class RecognitionScorer
 {
     public static RecognitionCandidate Score(AudioMetadata file,IReadOnlyList<AudioMetadata> neighbors,AcousticCandidate acoustic,RecordingInfo recording,ReleaseInfo? release)
     {
-        var fallback=new FolderMetadataFallback().Resolve(file);
+        var fallback=new FilenameMetadataFallback().Resolve(file);
         double Same(string a,string b)=>!MetadataQualityEvaluator.Invalid(a)&&MetadataNormalizer.Key(a)==MetadataNormalizer.Key(b)?1:0;
-        var folder=FolderMetadataFallback.Clean(Path.GetFileName(Path.GetDirectoryName(file.FullPath))??"");
+        var folder=FilenameMetadataFallback.Clean(Path.GetFileName(Path.GetDirectoryName(file.FullPath))??"");
         var evidence=new Dictionary<string,double>
         {
             ["Fingerprint"]=Math.Clamp(acoustic.Score,0,1)*.55,
@@ -19,7 +19,7 @@ public static class RecognitionScorer
             ["Album"]=release==null?0:Same(fallback.Album,release.Album)*.06,
             ["Track"]=release!=null&&fallback.Track>0&&fallback.Track==release.Track?.03:0,
             ["Folder"]=release!=null&&!MetadataQualityEvaluator.Invalid(release.Album)&&MetadataNormalizer.Key(folder).Contains(MetadataNormalizer.Key(release.Album),StringComparison.Ordinal)?.025:0,
-            ["Neighbors"]=release!=null&&neighbors.Count(x=>x.FullPath!=file.FullPath&&Same(x.Album,release.Album)==1)>=2?.025:0
+            ["Neighbors"]=0
         };
         var year=release?.OriginalYear??0;
         return new(new(recording.Artist,release?.AlbumArtist??"",release?.Album??"",recording.Title,release?.Track??0,release?.Disc??0,year),recording.Id,release?.Id??"",Math.Round(evidence.Values.Sum(),4),evidence,recording.Disambiguation);
@@ -37,3 +37,4 @@ public static class RecognitionScorer
         return result.Distinct().ToArray();
     }
 }
+

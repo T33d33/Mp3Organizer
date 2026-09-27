@@ -17,7 +17,7 @@ public static partial class TestRunner
     static void KingpinOfflineAndReport()
     {
         var row=Kingpin();var ac=new FakeAcoust();var result=Resolve(new(new FakeFingerprint{Value=null},ac,new FakeBrainz(),false,false),row);
-        Equal(0,ac.Calls);Equal("Cypress Hill",result.Artist);Equal("Kingpin OST",result.Album);Equal("Review",result.Identification!.Status);
+        Equal(0,ac.Calls);Equal("",result.Artist);Equal("",result.Album);Equal("Review",result.Identification!.Status);
         Equal("no artist",result.Identification.Original.Artist);Equal("no title",result.Identification.Original.Album);Equal("AudioTrack 02",result.Identification.Original.Title);
         foreach(var reason in new[]{"PlaceholderArtist","PlaceholderAlbum","GenericTrackTitle"})True(result.Identification.ReviewReason.Contains(reason));
         var f=Fixture();new IdentificationReportWriter().Write(f.Reports,f.Source,[result]);var csv=File.ReadAllText(Path.Combine(f.Reports,"identification.csv"));
@@ -27,12 +27,12 @@ public static partial class TestRunner
     {
         var fp=new FakeFingerprint();var ac=new FakeAcoust();var mb=new FakeBrainz{Value=new(new(RecordingId,"Cypress Hill","Checkmate",100),[])};
         var result=Resolve(Resolver(fp,ac,mb),Kingpin());Equal(1,fp.Calls);Equal(1,ac.Calls);Equal(1,mb.Calls);Equal("Checkmate",result.Title);Equal("Cypress Hill",result.Artist);True(result.Identification!.Status!="TagsAccepted");True(result.Identification.ReviewReason.Contains("GenericTrackTitle"));
-        ac=new(){Value=new([],"HTTP 503")};result=Resolve(Resolver(ac:ac),Kingpin());Equal("Cypress Hill",result.Artist);Equal("Kingpin OST",result.Album);Equal("Review",result.Identification!.Status);
+        ac=new(){Value=new([],"HTTP 503")};result=Resolve(Resolver(ac:ac),Kingpin());Equal("",result.Artist);Equal("",result.Album);Equal("Review",result.Identification!.Status);
     }
     static void KingpinInteractiveAndManualPriority()
     {
         var f=Fixture();var store=ManualStore(f);var row=Resolve(new(new FakeFingerprint{Value=null},new FakeAcoust(),new FakeBrainz(),false,false),Kingpin());
-        var input=new ScriptConsole("","","","","Checkmate");new InteractiveResolution(store,input).Run([row],true,false);
+        var input=new ScriptConsole("","Cypress Hill","Kingpin OST","","Checkmate");new InteractiveResolution(store,input).Run([row],true,false);
         True(input.Prompts.Any(x=>x.StartsWith("Title")));Equal("Checkmate",store.Load().Files.Values.Single().Title);
         var fp=new FakeFingerprint();var resolved=new ManualMetadataResolver(Resolver(fp),store).ResolveAsync(Kingpin(),[Kingpin()]).GetAwaiter().GetResult();
         Equal(0,fp.Calls);Equal("Checkmate",resolved.Title);Equal("ManualResolved",resolved.Identification!.Status);
@@ -43,6 +43,6 @@ public static partial class TestRunner
         var context=$"{(MetadataNormalizer.Key(row.Album),row.Year)}:1";
         cache.Put("resolution-v2:"+row.Sha256+":"+JsonFormat.Serialize(TagMetadata.From(row))+":"+context,JsonFormat.Serialize(row with{Identification=new(){LookupStatus="Success"}}),TimeSpan.MaxValue);
         var fp=new FakeFingerprint{Value=null};var result=new CachedMetadataResolver(new MetadataResolver(fp,new FakeAcoust(),new FakeBrainz(),false,false),cache,false).ResolveAsync(row,[row]).GetAwaiter().GetResult();
-        Equal(1,fp.Calls);Equal("Review",result.Identification!.Status);Equal("Cypress Hill",result.Artist);
+        Equal(1,fp.Calls);Equal("Review",result.Identification!.Status);Equal("",result.Artist);
     }
 }

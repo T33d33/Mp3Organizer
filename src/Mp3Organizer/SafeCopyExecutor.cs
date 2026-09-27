@@ -54,7 +54,7 @@ public sealed class ManagedPlaylistWriter
         foreach (var playlist in playlists)
         {
             var path = PathSafetyGuard.Destination(target, playlist.RelativePath, source);
-            if (!PathSafetyGuard.Within(path, Path.Combine(target, "_Playlists")) || Path.GetExtension(path) != ".m3u8") throw new IOException("Invalid managed playlist path.");
+            if ((!PathSafetyGuard.Within(path, Path.Combine(target, "_Playlists"))&&!PathSafetyGuard.Within(path,Path.Combine(target,"_Playlist-Folder"))) || Path.GetExtension(path) != ".m3u8") throw new IOException("Invalid managed playlist path.");
             if (File.Exists(path) && !state.Playlists.Contains(playlist.RelativePath, StringComparer.OrdinalIgnoreCase)) throw new IOException("Unmanaged playlist collision: " + path);
         }
         Replace("playlist-map.json", JsonFormat.Serialize(map));

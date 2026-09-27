@@ -47,7 +47,7 @@ public static partial class TestRunner
     static void ResolutionAmbiguous()
     {
         var ac=new FakeAcoust {Value=new([new("a",.99,RecordingId),new("b",.97,OtherRecordingId)])};var mb=new FakeBrainz();var r=Resolve(Resolver(ac:ac,mb:mb),Poor());
-        Equal(0,mb.Calls);True(r.Identification!.ReviewReason.Contains("Ambiguous"));Equal("",r.Identification.RecordingId);
+        Equal(2,mb.Calls);Equal(2,r.Identification!.Candidates.Count);True(r.Identification.ReviewReason.Contains("Ambiguous"));Equal("",r.Identification.RecordingId);
     }
     static void ResolutionReleaseSelection()
     {
@@ -67,7 +67,7 @@ public static partial class TestRunner
     static void ResolutionNeighborAlbum()
     {
         var row=Poor() with{Album=""};var neighbors=new[]{row,Row("b.wav") with{Album="Test Record"},Row("c.wav") with{Album="Test Record"}};
-        Equal("Test Record",Resolve(Resolver(),row,neighbors:neighbors).Album);
+        Equal("",Resolve(Resolver(),row,neighbors:neighbors).Album);
     }
     static void ResolutionGoodTagConflict()
     {
@@ -80,15 +80,15 @@ public static partial class TestRunner
     static void FallbackNoiseAndSoundtrack()
     {
         var path=Path.Combine(root,"Cypress Hill - Kingpin OST-uppedByTeedee","01 - Song.mp3");var row=Row(path,artist:"",title:"");
-        var r=new FolderMetadataFallback().Resolve(row);Equal("Cypress Hill",r.Artist);Equal("Kingpin OST",r.Album);Equal("Song",r.Title);Equal((uint)1,r.Track);
-        r=new FolderMetadataFallback().Resolve(Row(Path.Combine(root,"Cuphead OST","Song.mp3"),artist:""));Equal("Cuphead OST",r.Album);Equal("",r.Artist);
-        True(!FolderMetadataFallback.Clean("Album [320kbps]-uppedByUser").Contains("320"));
+        var r=new FilenameMetadataFallback().Resolve(row);Equal("",r.Artist);Equal("",r.Album);Equal("Song",r.Title);Equal((uint)1,r.Track);
+        r=new FilenameMetadataFallback().Resolve(Row(Path.Combine(root,"Cuphead OST","Song.mp3"),artist:""));Equal("",r.Album);Equal("",r.Artist);
+        True(!FilenameMetadataFallback.Clean("Album [320kbps]-uppedByUser").Contains("320"));
     }
     static void QualityTriggers()
     {
         var evaluator=new MetadataQualityEvaluator();var good=Row(artist:"Test Performer") with{Album="Test Record"};Equal(0,evaluator.Evaluate(good,[good]).Count);
         foreach(var row in new[]{good with{Artist="Unknown Artist"},good with{Title="song.mp3"},good with{Album=""},good with{Title="uppedByBob"}})True(evaluator.Evaluate(row,[row]).Count>0);
-        var conflict=good with{Album="Other"};True(evaluator.Evaluate(conflict,[conflict,good with{FullPath="b"},good with{FullPath="c"},good with{FullPath="d"}]).Any(x=>x.Contains("conflicts")));
+        var conflict=good with{Album="Other"};Equal(0,evaluator.Evaluate(conflict,[conflict,good with{FullPath="b"},good with{FullPath="c"},good with{FullPath="d"}]).Count);
     }
     sealed class FakeClock : ILookupClock
     {
@@ -225,7 +225,7 @@ public static partial class TestRunner
     {
         var row=Poor() with{Year=0,Album=""};var neighbors=new[]{row,Row("b") with{Album="Test Record",Year=2000},Row("c") with{Album="Test Record",Year=2000}};
         var release=MetadataResolver.ChooseRelease(row,neighbors,[new("original","Test Record","Test Performer",2000,1,1),new("reissue","Test Record","Test Performer",2020,1,1)]);
-        Equal("original",release!.Id);
+        True(release==null);
     }
     static void LosslessPropertyPreference() => Equal<int?>(1,new AudioQualityComparer().Compare(Row(artist:"Test Performer") with{Lossless=true,SampleRate=96000,BitsPerSample=24},Row(artist:"Test Performer") with{Lossless=true,SampleRate=44100,BitsPerSample=16}));
     static void UncertainQualityKeepsBoth()
@@ -246,3 +246,4 @@ public static partial class TestRunner
         Equal(before,Snapshot(f.Source));True(!Directory.Exists(Path.Combine(f.Reports,"cache")));
     }
 }
+

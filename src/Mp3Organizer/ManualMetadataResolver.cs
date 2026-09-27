@@ -23,7 +23,7 @@ public sealed class ManualMetadataResolver(IMetadataResolver inner,ManualResolut
         var folderHit=HasFields(folder);var fileHit=HasFields(specific);
         if(!folderHit&&!fileHit)return effective;
         var evidence=effective.Identification??new IdentificationEvidence();
-        return result with{Identification=evidence with{Original=file.Identification?.Original??TagMetadata.From(file),BeforeManualMetadata=TagMetadata.From(effective),BeforeManualFieldSources=evidence.FieldSources,FieldSources=MetadataFieldMerger.ManualSources(evidence,folder,specific),BeforeManualSource=evidence.Source,ManualOverrideHit=true,Source=fileHit?MetadataSource.FileManualOverride:MetadataSource.FolderManualOverride,
+        return result with{Identification=evidence with{RecognitionMethod="Manual",Original=file.Identification?.Original??TagMetadata.From(file),BeforeManualMetadata=TagMetadata.From(effective),BeforeManualFieldSources=evidence.FieldSources,FieldSources=MetadataFieldMerger.ManualSources(evidence,folder,specific),BeforeManualSource=evidence.Source,ManualOverrideHit=true,Source=fileHit?MetadataSource.FileManualOverride:MetadataSource.FolderManualOverride,
             Status=NeedsInput(result)?"Review":"ManualResolved",ReviewReason=NeedsInput(result)?"Manual defaults applied; artist, album, title, or track number still needs input.":"",
             ConfidentRecording=evidence.ConfidentRecording&&result.Artist==effective.Artist&&result.Title==effective.Title}};
     }

@@ -8,7 +8,7 @@ public static partial class TestRunner
         var mb=new FakeBrainz{Value=new(new(RecordingId,"Cypress Hill","Checkmate",100),[])};
         var result=Resolve(Resolver(mb:mb),row);Equal("Kingpin OST",result.Album);Equal((uint)1999,result.Year);Equal((uint)3,result.Track);Equal((uint)2,result.Disc);Equal("Cypress Hill",result.AlbumArtist);Equal("Checkmate",result.Title);
         Equal("Tags",result.Identification!.FieldSources["Album"]);Equal("AcoustIdMusicBrainz",result.Identification.FieldSources["Title"]);
-        result=Resolve(Resolver(mb:mb),Kingpin());Equal("Kingpin OST",result.Album);Equal("FolderFallback",result.Identification!.FieldSources["Album"]);
+        result=Resolve(Resolver(mb:mb),Kingpin());Equal("",result.Album);Equal("Unresolved",result.Identification!.FieldSources["Album"]);
     }
     static void PartialFieldPriorityAndPlaceholders()
     {
@@ -21,9 +21,9 @@ public static partial class TestRunner
     }
     static void FieldSourcesReport()
     {
-        var f=Fixture();var row=MetadataFieldMerger.Merge(Kingpin(),new FolderMetadataFallback().Resolve(Kingpin()),new(RecordingId,"Cypress Hill","Checkmate",100));
-        new IdentificationReportWriter().Write(f.Reports,f.Source,[row]);var text=File.ReadAllText(Path.Combine(f.Reports,"identification.csv"));True(text.Contains("AlbumSource"));True(text.Contains("FolderFallback"));
-        var sources=MetadataFieldMerger.ManualSources(row.Identification!,new(){Year=2000},new(){Title="Chosen"});Equal("FolderManualOverride",sources["Year"]);Equal("FileManualOverride",sources["Title"]);Equal("FolderFallback",sources["Album"]);
+        var f=Fixture();var row=MetadataFieldMerger.Merge(Kingpin(),new FilenameMetadataFallback().Resolve(Kingpin()),new(RecordingId,"Cypress Hill","Checkmate",100));
+        new IdentificationReportWriter().Write(f.Reports,f.Source,[row]);var text=File.ReadAllText(Path.Combine(f.Reports,"identification.csv"));True(text.Contains("AlbumSource"));True(text.Contains("AcoustIdMusicBrainz"));
+        var sources=MetadataFieldMerger.ManualSources(row.Identification!,new(){Year=2000},new(){Title="Chosen"});Equal("FolderManualOverride",sources["Year"]);Equal("FileManualOverride",sources["Title"]);Equal("Unresolved",sources["Album"]);
     }
     static void IdentificationStageProgress()
     {
@@ -31,3 +31,5 @@ public static partial class TestRunner
         Resolve(resolver,Kingpin());foreach(var stage in new[]{"Fingerprinting:","AcoustID:","MusicBrainz:","Resolution:"})True(messages.Any(x=>x.StartsWith(stage)));
     }
 }
+
+

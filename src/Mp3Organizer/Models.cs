@@ -2,6 +2,7 @@ namespace Mp3Organizer;
 
 public sealed record AudioMetadata
 {
+    public string[] SuppressedAutomaticFields {get;init;}=[];
     public string FullPath { get; init; } = "";
     public string OriginalSourcePath {get;init;}="";
     public string FileName { get; init; } = "";
@@ -51,6 +52,9 @@ public sealed class PlaylistMap
 }
 public sealed class CopyPlan
 {
+    public bool SelectedInventoryOnly {get;set;}
+    public string ProgressWorkspace {get;set;}="";
+    public int MetadataPolicyVersion {get;set;}
     public int SchemaVersion { get; set; } = 1;
     public string PlanId { get; set; } = Guid.NewGuid().ToString("N");
     public string Source { get; set; } = "";

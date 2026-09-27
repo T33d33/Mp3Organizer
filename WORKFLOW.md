@@ -2,7 +2,7 @@
 
 ## Architecture
 
-The source is read-only. Scanning computes whole-file SHA-256; size and modification time are observations, never substitutes for content identity. `ManualMetadataResolver` wraps `CachedMetadataResolver` and the existing automatic resolver. Per-field precedence is file override, folder override, valid embedded tag, confident online result, then fallback. Original tags and pre-manual metadata remain available. No audio tags are saved.
+The source is read-only unless the new explicit --write-tags mode is used; see [runtime recognition](RECOGNITION.md). Scanning computes whole-file SHA-256; size and modification time are observations, never substitutes for content identity. `ManualMetadataResolver` wraps `CachedMetadataResolver` and the existing automatic resolver. Per-field precedence is file override, folder override, valid embedded tag, confident online result, then fallback. Original tags and pre-manual metadata remain available. The legacy resolver does not save tags. The dedicated opt-in MP3 writer stages tag edits, verifies identical audio payload and retains a full backup.
 
 `IdentificationCache` uses Windows native `winsqlite3.dll`, bound parameters, WAL and full synchronization. No additional package is needed. `IFingerprintGenerator` separates fpcalc from caching. `IResolutionConsole` enables scripted tests. `ManualResolutionStore` owns authoritative JSON; SQLite contains only recomputable automatic results. Planning records the manual file revision; changing it requires replanning. Playlist regeneration reconciles manual decisions with the target metadata sidecar.
 
@@ -140,4 +140,6 @@ Backspace now deletes typed text and does nothing on empty input. Alt+Left navig
 
 ## Cross-folder navigation
 Build artifacts-crossfolder retains each folder's question history for the interactive session. Alt+Left at a folder selection returns to the previous visited folder's last question with the saved answer and source path. Enter proceeds forward again; repeated backwards navigation preserves answers. At the first session folder a clear boundary message is shown. History is session-local; after completion/restart use --edit-manual to revisit saved answers. Backspace still edits text. All 157 tests pass; only synthetic files were used. Invoke artifacts-crossfolder/Mp3Organizer.dll.
+
+
 

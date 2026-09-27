@@ -10,13 +10,14 @@ public sealed class Mp3TagWriteService(string workspace,ProgressRepository repos
     {
         var path=item.CurrentPath;PathSafetyGuard.NoLinks(path);PathSafetyGuard.Separate(item.SourceRoot,workspace);
         if(!PathSafetyGuard.Within(path,item.SourceRoot)||!Path.GetExtension(path).Equals(".mp3",StringComparison.OrdinalIgnoreCase))throw new IOException("Tag writing is limited to indexed MP3 source files.");
+        if(!repository.All().Any(x=>x.Id==item.Id&&x.CurrentPath.Equals(path,StringComparison.OrdinalIgnoreCase)&&x.SourceRoot.Equals(item.SourceRoot,StringComparison.OrdinalIgnoreCase)))throw new IOException("MP3 is not registered in this progress database.");
         var e=item.Effective.Identification;
         if(item.Status==ProcessingStatus.NeedsReview||e?.Status=="Review")throw new IOException("Unresolved results cannot write tags.");
         if(!manual&&e?.AutoRecognized!=true&&!(e?.YearEnriched==true&&e.YearConfidence>=.95))return item;
         var reader=new TagLibMetadataReader(new ReadOnlySource());var original=reader.Read(path);
         if(original.Error!=""||original.Sha256!=item.Basic.Sha256)throw new IOException("Source changed before tag writing; scan again.");
         var desired=item.Effective;
-        if(!manual&&original.Year!=0)desired=desired with{Year=original.Year};
+        if(!manual&&(original.Year!=0||!(e?.YearEnriched==true&&e.YearConfidence>=.95)))desired=desired with{Year=original.Year};
         if(desired.Year!=0&&(desired.Year<1000||desired.Year>9999))throw new IOException("Year tag must be four digits.");
         var fingerprint=Mp3AudioPayload.Hash(path);
         PathSafetyGuard.Writable(JournalDirectory,item.SourceRoot);Directory.CreateDirectory(JournalDirectory);
@@ -26,6 +27,8 @@ public sealed class Mp3TagWriteService(string workspace,ProgressRepository repos
         var temporary=Path.Combine(Path.GetDirectoryName(path)!,".mp3organizer-tags-"+token+".mp3");
         PathSafetyGuard.NoLinks(temporary);
         File.Copy(path,backup,false);File.Copy(path,temporary,false);
+        try
+        {
         using(var tags=TagLib.File.Create(temporary))
         {
             bool Replace(string existing)=>manual||MetadataQualityEvaluator.Invalid(existing);
@@ -47,6 +50,12 @@ public sealed class Mp3TagWriteService(string workspace,ProgressRepository repos
         using(var input=new ReadOnlySource().OpenRead(path))if(Convert.ToHexString(SHA256.HashData(input))!=original.Sha256)throw new IOException("Source changed during tag preparation; original not replaced.");
         File.Replace(temporary,path,null);
         return Finish(journalPath,journal);
+        }
+        finally
+        {
+            // Only our exact random staging file is removed; never the input or backup.
+            if(File.Exists(temporary))File.Delete(temporary);
+        }
     }
     public void Recover()
     {

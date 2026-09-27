@@ -66,6 +66,7 @@ public static class Program
             var configuration=IdentificationConfiguration.Read();
             Console.WriteLine(configuration.Status(online,offline));
             if(online&&configuration.Problem!=null)return 1;
+            Console.WriteLine("Full-source mode uses deterministic identification. For runtime Codex reasoning and resumable batches, use scan then analyze --limit N --online.");
         }
         var source = PathSafetyGuard.Canonical(positionals[0]);
         if (command == "playlists")
@@ -80,8 +81,10 @@ public static class Program
             rows=ManualMetadataResolver.ReconcileTarget(source,rows,manual);
             var map = new PlaylistMapStore().Load(source);
             var lists = new PlaylistBuilder().Build(rows.Select(x => new CopyOperation(x, Path.GetRelativePath(source, x.FullPath), "Existing")).ToList(), map);
+            FolderPlaylistService.PreserveExisting(source,lists);
             PlaylistBuilder.IncludeRetired(lists, state);
             new ManagedPlaylistWriter().Write(source, state.Source, lists, map,rows.ToDictionary(x=>Path.GetRelativePath(source,x.FullPath),StringComparer.OrdinalIgnoreCase));
+            if(File.Exists(Path.Combine(workspace,"music-organizer.db"))){using var repository=new ProgressRepository(workspace);new FolderPlaylistService(repository).Regenerate(state.Source,source,progress.Write);}
             Console.WriteLine($"Generated {lists.Count} playlists; managed replacements are backed up."); return 0;
         }
         PathSafetyGuard.Separate(source, reports);
@@ -113,10 +116,17 @@ public static class Program
         PathSafetyGuard.Separate(target, reports);
         if (command == "plan")
         {
+            if(File.Exists(Path.Combine(workspace,"music-organizer.db"))){using var repository=new ProgressRepository(workspace);MetadataPolicy.Migrate(repository,workspace,Console.WriteLine);}
             var progress = new ConsoleProgress();
             using var identification = new IdentificationSession(source,cachePath ?? Path.Combine(workspace,"cache.db"),target,online,identifyAll,workspace,rebuild,refresh,retryDays,progress.Write);
             var manualRevision=identification.ManualStore!.Revision();
-            var plan = new CopyPlanBuilder().Build(source, target,identification.Resolver,identifyAll||rebuild,progress.Write);
+            IMetadataResolver planResolver=identification.Resolver;
+            if(File.Exists(Path.Combine(workspace,"music-organizer.db")))
+            {
+                using var repository=new ProgressRepository(workspace);
+                planResolver=new ManualMetadataResolver(new ProgressMetadataResolver(planResolver,repository.All()),identification.ManualStore);
+            }
+            var plan = new CopyPlanBuilder().Build(source, target,planResolver,identifyAll||rebuild,progress.Write,workspace:workspace);
             if(manualRevision!=identification.ManualStore.Revision())throw new IOException("Manual resolutions changed while building the plan; run plan again.");
             plan.ManualFilePath=identification.ManualStore.FilePath;plan.ManualFileRevision=manualRevision;
             var saved = new CopyPlanStore().Save(plan, reports);
@@ -130,10 +140,11 @@ public static class Program
         var savedPlan = new CopyPlanStore().Load(file);
         if(savedPlan.ManualFilePath!=""&&!string.Equals(savedPlan.ManualFilePath,Path.Combine(workspace,"manual-resolutions.json"),StringComparison.OrdinalIgnoreCase))throw new IOException("Use the same --workspace as the saved plan, or create a new plan.");
         if(savedPlan.ManualFilePath==""&&File.Exists(Path.Combine(workspace,"manual-resolutions.json")))throw new IOException("Plan predates manual resolution support; create a new plan.");
+        if(savedPlan.ProgressWorkspace==""&&File.Exists(Path.Combine(workspace,"music-organizer.db")))savedPlan.ProgressWorkspace=workspace;
         new SafeCopyExecutor().Execute(savedPlan, source, target, dryRun);
         if(!dryRun)ProgressResultRecorder.Record(workspace,source,savedPlan.Operations.Select(x=>x.Metadata),true);
         Console.WriteLine(dryRun ? $"Dry run validated: {savedPlan.Operations.Count(x => x.Action == "Copy")} copies and {savedPlan.Playlists.Count} playlists. No files written." : "Apply completed; source untouched. Managed playlist replacements were backed up.");
         return 0;
     }
-    private static void Help() => Console.WriteLine("Mp3Organizer scan <source> [--force] [--workspace <directory>]\nMp3Organizer review [--workspace <directory>] [--write-tags]\nMp3Organizer status [--workspace <directory>]\nMp3Organizer analyze --limit N [--online|--offline] [--write-tags] [--workspace <directory>]\nMp3Organizer reset-file <path> | reset-folder <path> | reset-errors | reset-review | reset-progress | reset-all\nMp3Organizer analyze <source> [--reports <directory>]\nMp3Organizer identify <source> [--identify-all] [--online|--offline]\nMp3Organizer resolve <source> [--only-unresolved] [--edit-manual]\nMp3Organizer doctor [--offline] [--workspace <directory>] [--cache <path>]\nMp3Organizer manual validate\nMp3Organizer plan <source> <target>\nMp3Organizer apply <source> <target> [--plan <copy-plan.json>] [--dry-run]\nMp3Organizer playlists <target>\nShared: --workspace <directory> (default workspace), --reports <directory>\nIdentification: --cache <cache.db>, --rebuild-fingerprints, --refresh-identification (requires --online), --identification-retry-days <days> (default 30).\nOnline identification is opt-in. Manual JSON is authoritative; source files are immutable.");
+    private static void Help() => Console.WriteLine("Normal workflow: scan <source>, then run --online --workspace <directory>\nMp3Organizer run [--online|--offline] [--workspace <directory>] [--target <directory>] [--reports <directory>] [--codex|--no-codex] [--write-tags] [--limit N]\nMp3Organizer scan <source> [--force] [--workspace <directory>]\nMp3Organizer review [--workspace <directory>] [--write-tags]\nMp3Organizer status [--workspace <directory>]\nMp3Organizer analyze --limit N [--online|--offline] [--codex|--no-codex] [--write-tags] [--workspace <directory>]\nMp3Organizer reset-file <path> | reset-folder <path> | reset-errors | reset-review | reset-progress | reset-all\nMp3Organizer analyze <source> [--reports <directory>]\nMp3Organizer identify <source> [--identify-all] [--online|--offline]\nMp3Organizer resolve <source> [--only-unresolved] [--edit-manual]\nMp3Organizer doctor [--offline] [--workspace <directory>] [--cache <path>]\nMp3Organizer manual validate\nMp3Organizer plan <source> <target>\nMp3Organizer apply <source> <target> [--plan <copy-plan.json>] [--dry-run]\nMp3Organizer playlists <target>\nShared: --workspace <directory> (default workspace), --reports <directory>\nIdentification: --cache <cache.db>, --rebuild-fingerprints, --refresh-identification (requires --online), --identification-retry-days <days> (default 30).\nOnline identification is opt-in. Incremental --online enables Codex reasoning unless --no-codex. Configure OPENAI_API_KEY and MP3ORGANIZER_CODEX_MODEL. Only explicit --write-tags allows verified MP3 tag edits; audio is never re-encoded.");
 }

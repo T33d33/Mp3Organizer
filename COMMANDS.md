@@ -1,6 +1,10 @@
 # Mp3Organizer: quick start and complete command guide
 
-This guide describes the current **artifacts-progress-state** build. Older build folders and launchers remain on disk; do not assume they contain the same commands. All examples use PowerShell and your test-library paths. Examples are instructions for you to run; writing this guide did not execute them against your music.
+The intended normal workflow is now **scan + run**. See [RUN.md](RUN.md) for default/persisted target paths, automatic downstream processing, exclusions and recovery. `run --online --workspace PATH` analyzes pending entries and automatically applies Ready entries; manual analyze/plan/apply remains available for diagnostics.
+
+Incremental analysis now reports actual LLM HTTP attempts and outcomes, with batch statistics and cumulative `status` counts. See [counter definitions and diagnostics](OBSERVABILITY.md).
+
+This guide describes the current **artifacts-playlist-import** build. Start with the updated [recommended workflow and runtime recognition guide](RECOGNITION.md) for OpenAI configuration, review, verified tag writes and quota/resume handling. Older build folders and version-specific launchers remain on disk. The main Mp3Organizer.cmd and Mp3Organizer.ps1 launchers now select artifacts-playlist-import. Source-folder grouping, policy migration and playlist ordering are documented in [FOLDERS.md](FOLDERS.md); no classification step is required. [Original playlist import](PLAYLIST-IMPORT.md) runs after organization and generates Code Playlist names with corrected target paths. All examples use PowerShell and your test-library paths. Examples are instructions for you to run; writing this guide did not execute them against your music.
 
 ## 1. Recommended quick start
 
@@ -9,7 +13,7 @@ This guide describes the current **artifacts-progress-state** build. Older build
 Use `dotnet` with the explicit DLL path. You can then run commands from any working directory, including `C:\Windows\system32`, without accidentally creating a different workspace there.
 
 ```powershell
-$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-progress-state\Mp3Organizer.dll'
+$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-playlist-import\Mp3Organizer.dll'
 $source = 'E:\Mp3-Ai-test'
 $target = 'E:\Mp3-Ai-test-organized'
 $workspace = 'E:\Mp3-Ai-test-workspace'
@@ -20,7 +24,7 @@ dotnet $dll --help
 
 Keep these four directories separate. Source contains your input audio. Target contains organized copies. Workspace contains progress/cache/manual decisions. Reports contains generated CSVs and saved copy plans.
 
-The source is immutable. None of the commands intentionally writes tags, moves, renames or deletes source audio. The only audio-producing operation is an explicitly executed `apply`, which copies into the target.
+Source tags are read-only by default; source audio is never re-encoded. Only explicit `--write-tags` on `run`, incremental `analyze --limit` or `review` allows validated MP3 tag edits, with backups and identical-audio verification. No command moves, renames or deletes original source audio. `apply` copies into the target. Tag edits change file hashes, so recreate old copy plans after retagging.
 
 ### 1.2 Configure acoustic identification
 
@@ -32,6 +36,8 @@ The source is immutable. None of the commands intentionally writes tags, moves, 
 $env:ACOUSTID_API_KEY = 'YOUR_ACOUSTID_APPLICATION_KEY'
 $env:CHROMAPRINT_FPCALC = 'C:\Tools\Chromaprint\fpcalc.exe'
 $env:MP3ORGANIZER_CONTACT = 'your-email@example.com'
+$env:OPENAI_API_KEY = 'YOUR_OPENAI_API_KEY'
+$env:MP3ORGANIZER_CODEX_MODEL = 'YOUR_ACCESSIBLE_RESPONSES_MODEL_WITH_STRUCTURED_OUTPUTS'
 
 dotnet $dll doctor --workspace $workspace
 ```
@@ -42,20 +48,22 @@ These assignments affect the current PowerShell process and programs launched fr
 
 For a local-only check, run `dotnet $dll doctor --workspace $workspace --offline`. Missing online prerequisites can still be reported as failures; offline identification itself does not require them.
 
-### 1.3 Index once, analyze in batches
+### 1.3 Scan the whole input tree, then run
 
 ```powershell
 dotnet $dll scan $source --workspace $workspace
 dotnet $dll status --workspace $workspace
-dotnet $dll analyze --limit 200 --workspace $workspace --online --reports $reports
+dotnet $dll run --online --workspace $workspace
 dotnet $dll status --workspace $workspace
 ```
 
-Repeat **only the analyze/status commands** to work through the pending files over successive sessions. Completed results are committed per file. Run `scan` again when files have been added or changed; unchanged files are inexpensive to check.
+Repeat scan + run when folders are added; use run alone to resume already indexed work. Existing progress is preserved. The target defaults to the sibling source-organized folder, and reports to workspace/reports. Ready means Ready to apply and is handled automatically by run; unresolved entries are left NeedsReview. Add --target for a persistent override or --reports for a per-run report location. See RUN.md for the exact phase ordering and failure behavior.
 
-Online access always requires `--online`. Omitting `--offline` does not enable it. For local tags, cached results and filename/folder hints only, substitute `--offline` or omit both flags.
+AcoustID/MusicBrainz access requires `--online`. Runtime LLM configuration and its separate `--codex` switch are documented in [RECOGNITION.md](RECOGNITION.md). Omitting `--offline` alone does not enable online access. For local tags, cached results and filename/folder hints only, substitute `--offline` or omit both flags.
 
 ### 1.4 Review uncertain metadata
+
+For the persistent review queue use `dotnet $dll review --workspace $workspace`; add `--write-tags` to save confirmed MP3 tag edits. Runtime LLM configuration, safeguards and review keys are in [RECOGNITION.md](RECOGNITION.md). The older folder-based resolver below is also available.
 
 ```powershell
 dotnet $dll resolve $source --workspace $workspace --reports $reports --only-unresolved
@@ -75,7 +83,7 @@ Two blank lines and the full folder/file path appear immediately above each inpu
 
 To revisit already completed answers, use **`--edit-manual` instead of `--only-unresolved`**. Edit mode intentionally asks you to reconfirm existing file decisions. Enter accepts a displayed track number; you do not need to retype it.
 
-### 1.5 Plan, inspect, simulate, then copy
+### 1.5 Optional lower-level diagnostics: plan, simulate, then copy
 
 ```powershell
 dotnet $dll plan $source $target --workspace $workspace --reports $reports
@@ -110,6 +118,7 @@ This scans the managed target, regenerates playlists and `playlist-index.csv`, p
 | Force metadata/hash reread | `scan SOURCE --force` |
 | View persisted counts | `status` |
 | Process a bounded set of pending files | `analyze --limit N` |
+| Review persistent NeedsReview entries | `review [--write-tags]` |
 | Full-source analysis and inventory reports | `analyze SOURCE` |
 | Full-source identification/report run | `identify SOURCE` |
 | Answer unresolved questions | `resolve SOURCE --only-unresolved` |
@@ -133,6 +142,9 @@ Use the same explicit `--workspace $workspace` everywhere. Use `--reports $repor
 | `CHROMAPRINT_FPCALC` | Executable path or executable name | Needed if fpcalc is not discoverable on PATH |
 | `MP3ORGANIZER_CONTACT` | Contact email or URL embedded in MusicBrainz User-Agent | `--online` |
 | `MP3ORGANIZER_WORKSPACE` | Default workspace directory | Optional; explicit `--workspace` wins |
+| `OPENAI_API_KEY` | OpenAI API key (separate from desktop session) | Runtime LLM reasoning |
+| `MP3ORGANIZER_CODEX_MODEL` | API-accessible Responses model with structured outputs | Runtime LLM reasoning |
+| `MP3ORGANIZER_CODEX_ENABLED` | Set false to opt out of default LLM stage; --codex overrides | Optional |
 
 There is no credentials JSON file, `.env` auto-loader or alternate configuration key. A PowerShell variable such as `$ACOUSTID_API_KEY` is not enough; use `$env:ACOUSTID_API_KEY` so the child process receives it.
 
@@ -239,7 +251,7 @@ Completion is `(Ready + Processed + Skipped) / Total`. NeedsReview/Error do not 
 
 ### `analyze --limit N` — incremental
 
-Syntax: `analyze --limit N [--online|--offline] [--workspace PATH] [--reports PATH]`.
+Syntax: `analyze --limit N [--online|--offline] [--codex|--no-codex] [--write-tags] [--workspace PATH] [--reports PATH]`. See [RECOGNITION.md](RECOGNITION.md) for the runtime LLM pipeline, configuration, failure/resume handling, review and source tag-write rules.
 
 ```powershell
 dotnet $dll analyze --limit 200 --workspace $workspace --online --reports $reports
@@ -410,7 +422,7 @@ On confirmation it clears indexed file rows and processing history, retaining th
 |---|---|
 | scan | workspace, force |
 | status and reset commands | workspace |
-| analyze --limit | limit, workspace, reports, online/offline |
+| analyze --limit | limit, workspace, reports, online/offline, codex/no-codex, write-tags |
 | analyze SOURCE / identify SOURCE | workspace, reports, all full-source identification options |
 | resolve | Same as full-source identification, plus only-unresolved/edit-manual |
 | plan | workspace, reports, full-source identification options |
@@ -500,6 +512,7 @@ Let the existing process finish. Do not delete the workspace lock to defeat an a
 | 1 | Configuration, validation, I/O, database or other handled error; doctor failure |
 | 2 | Missing command, or cancelled reset-all |
 | 3 | Incomplete scan/full analysis, blocking plan conflicts, or incremental file-analysis errors |
+| 4 | Codex unavailable or misconfigured; progress saved, current file pending; resume the same analyze command |
 
 After any command inspect `$LASTEXITCODE`. Exit 0 is not a promise that all metadata was confidently identified. In particular, reference warnings from manual validate and NeedsReview results require reading the report/status output.
 
@@ -508,8 +521,8 @@ After any command inspect `$LASTEXITCODE`. Exit 0 is not a promise that all meta
 From the solution directory:
 
 ```powershell
-.\build-offline.ps1 -OutputDirectory artifacts-progress-state
-dotnet .\artifacts-progress-state\Mp3Organizer.Tests.dll 'C:\Users\tglaz\Documents\Codex\Mp3Organizer-test-scratch'
+.\build-offline.ps1 -OutputDirectory artifacts-playlist-import
+dotnet .\artifacts-playlist-import\Mp3Organizer.Tests.dll 'C:\Users\tglaz\Documents\Codex\Mp3Organizer-test-scratch'
 ```
 
 The offline script uses installed .NET 10 SDK/reference assemblies and an installed TagLibSharp 2.3.0 DLL. `-TagLibDll PATH` overrides that dependency location. Do not rebuild into an output currently in use; choose another output directory and update `$dll` for the next run.
@@ -522,6 +535,10 @@ dotnet build Mp3Organizer.slnx --no-restore -c Release
 dotnet run --project tests/Mp3Organizer.Tests/Tests.csproj -c Release --no-build
 ```
 
-Tests use a dependency-free executable runner; `dotnet test` is not its entry point. The latest application build passed 169 tests with synthetic files and mocked identification. Standard NuGet/MSBuild restore remains unverified in the restricted development environment. Native SQLite makes this implementation Windows-specific. This documentation change does not install tools, configure your environment or run the real-library commands.
+Tests use a dependency-free executable runner; `dotnet test` is not its entry point. The latest application build passed 213 tests with synthetic files and mocked identification. Standard NuGet/MSBuild restore remains unverified in the restricted development environment. Native SQLite makes this implementation Windows-specific. This documentation change does not install tools, configure your environment or run the real-library commands.
 
 Further detail: [progress architecture/schema](PROGRESS.md), [progress SQL](progress-schema.sql), [identification internals](IDENTIFICATION.md), [manual/cache workflow](WORKFLOW.md), [manual JSON schema](manual-resolutions.schema.json), and [cache SQL](cache-schema.sql). Older workflow notes describe the evolution of the app; this guide's build path and keyboard controls take precedence for the current documented build.
+
+
+
+

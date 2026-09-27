@@ -11,8 +11,7 @@ public sealed class YearEnrichmentResolver(IMetadataResolver inner,IAlbumYearCli
         // A verified release-group first date can already have enriched this result.
         if(row.Year>0&&e.YearSource=="MusicBrainz")return row;
         // Do not present a later edition date as an original album year.
-        if(row.Year>0&&e.FieldSources.GetValueOrDefault("Year")=="AcoustIdMusicBrainz")row=row with{Year=0,Date=""};
-        if(row.Year>0)return row;
+        if(row.Year>0)row=row with{Year=0,Date=""};
         var artist=MetadataQualityEvaluator.Invalid(row.AlbumArtist)?row.Artist:row.AlbumArtist;
         if(MetadataQualityEvaluator.Invalid(artist)||MetadataQualityEvaluator.Invalid(row.Album))return Review(row,e,"UnknownYear","Album identity incomplete; no reliable year lookup.");
         progress?.Invoke("MusicBrainz: original album year or cache");
@@ -33,7 +32,7 @@ public sealed class YearEnrichmentResolver(IMetadataResolver inner,IAlbumYearCli
             return row with{Year=match.OriginalYear,Date=match.OriginalYear.ToString(),Identification=e with{FieldSources=sources,YearSource="MusicBrainz",YearConfidence=.95,YearEnriched=true,AlbumGroupId=match.GroupId,ReviewReasons=reasons,Status=complete?e.Status:"Review",Evidence=e.Evidence+"; original album year from MusicBrainz release-group "+match.GroupId+" (exact artist/album, unique complete result)",IdentificationCacheHit=e.IdentificationCacheHit||lookup.CacheHit}};
         }
         var candidates=matches.Select(x=>new RecognitionCandidate(TagMetadata.From(row) with{Year=x.OriginalYear},e.RecordingId,"",0,new(){["ExactArtistAlbum"]=1},"MusicBrainz release-group "+x.GroupId)).ToList();
-        e=e with{Candidates=e.Candidates.Concat(candidates).Take(9).ToList()};
+        e=e with{Candidates=e.Candidates.Concat(candidates).Take(9).ToList(),CandidatesComplete=e.CandidatesComplete&&lookup.Complete&&e.Candidates.Count+candidates.Count<=9};
         return Review(row,e,matches.Count>1?"AmbiguousAlbum":"UnknownYear",lookup.Error!=""?lookup.Error:"Original year not established uniquely; no year guessed.");
     }
     private static AudioMetadata Review(AudioMetadata row,IdentificationEvidence e,string reason,string detail)=>row with{Identification=e with{Status="Review",ReviewReasons=e.ReviewReasons.Concat(new[]{reason,"UnknownYear"}).Distinct().ToArray(),ReviewReason=string.Join("; ",new[]{e.ReviewReason,reason,"UnknownYear",detail}.Where(x=>x!=""))}};

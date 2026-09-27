@@ -28,6 +28,16 @@ public sealed class PlaylistIndexBuilder
         foreach (var artist in artists)
             foreach (var album in artist.Albums.Values.OrderBy(x => x.AlbumId))
                 Add(PlaylistNames.AlbumCode(artist, album), "Album", artist.DisplayName, album.DisplayName, PlaylistNames.AlbumPath(artist, album));
+        foreach(var path in paths.Where(x=>x.StartsWith("_Playlists\\Folders\\",StringComparison.OrdinalIgnoreCase)).OrderBy(x=>x,NaturalPathComparer.Instance))
+        {
+            var name=Path.GetFileNameWithoutExtension(path);var match=System.Text.RegularExpressions.Regex.Match(name,@"^\[(FOLDER-\d+)\] (.+)$");
+            if(match.Success)result.Add(new(match.Groups[1].Value,"Folder","", "",path));
+        }
+        foreach(var path in paths.Where(x=>x.StartsWith("_Playlist-Folder\\",StringComparison.OrdinalIgnoreCase)).OrderBy(x=>x,NaturalPathComparer.Instance))
+        {
+            var match=System.Text.RegularExpressions.Regex.Match(Path.GetFileNameWithoutExtension(path),@"^Code (Playlist \d+) - ");
+            if(match.Success)result.Add(new(match.Groups[1].Value,"ImportedPlaylist","","",path));
+        }
         return result;
         void Add(string code, string type, string artist, string album, string path)
         {

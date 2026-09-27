@@ -1,11 +1,21 @@
 # Mp3Organizer — quick start
 
+**[Normal workflow: scan + run](RUN.md)** — automatically analyze and apply eligible files; leave NeedsReview pending.
+
+**[Folder playlists, permanent IDs and migration of old Ready metadata](FOLDERS.md)** — source grouping is preserved independently from Artist/Album metadata, without classification prompts.
+
+**[Import original playlists with permanent spoken codes](PLAYLIST-IMPORT.md)** — scan discovers playlists; run rewrites their entries to verified organized paths under `_Playlist-Folder` after copying finishes.
+
 **[Complete command guide: configuration, every command, examples and troubleshooting](COMMANDS.md)**
+
+**[Runtime Codex/LLM recognition, original album years, review, quota recovery and verified tag writes](RECOGNITION.md)**
+
+**[LLM request messages, batch statistics and cumulative activity counts](OBSERVABILITY.md)**
 
 Use the latest build directly with `dotnet`, rather than an older `.cmd` launcher. Start each PowerShell session with:
 
 ```powershell
-$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-progress-state\Mp3Organizer.dll'
+$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-playlist-import\Mp3Organizer.dll'
 $source = 'E:\Mp3-Ai-test'
 $target = 'E:\Mp3-Ai-test-organized'
 $workspace = 'E:\Mp3-Ai-test-workspace'
@@ -18,6 +28,8 @@ Configure online identification using your AcoustID **application key**, actual 
 $env:ACOUSTID_API_KEY = 'YOUR_ACOUSTID_APPLICATION_KEY'
 $env:CHROMAPRINT_FPCALC = 'C:\Tools\Chromaprint\fpcalc.exe'
 $env:MP3ORGANIZER_CONTACT = 'your-email@example.com'
+$env:OPENAI_API_KEY = 'YOUR_OPENAI_API_KEY'
+$env:MP3ORGANIZER_CODEX_MODEL = 'YOUR_ACCESSIBLE_RESPONSES_MODEL_WITH_STRUCTURED_OUTPUTS'
 
 dotnet $dll doctor --workspace $workspace
 ```
@@ -28,16 +40,25 @@ Recommended incremental workflow:
 
 ```powershell
 dotnet $dll scan $source --workspace $workspace
-dotnet $dll analyze --limit 200 --workspace $workspace --online --reports $reports
+dotnet $dll run --online --workspace $workspace
 dotnet $dll status --workspace $workspace
 ```
 
-Repeat `analyze --limit 200` next session with the same workspace to continue. Do not reset progress between batches. Rescan when the collection changes. Online access requires explicit `--online`; use `--offline` for local/cached analysis.
+Repeat `scan` after adding folders, then `run` with the same workspace. Do not reset existing progress. `run` analyzes pending files and automatically copies Ready files into `E:\Mp3-Ai-test-organized`, marking successful entries Processed. NeedsReview, Error, Processed and Skipped files are skipped. Reports default to workspace/reports. Use `--target` for a persisted custom target and `--reports` to override report output for that invocation. `--online` enables factual lookup followed by runtime LLM reasoning for ambiguity. Use `--no-codex` for deterministic-only online analysis, or `--offline` for local/cached analysis; offline run still copies Ready files. The LLM uses your OpenAI API key/model, not this desktop chat's quota.
 
-Review uncertain entries, then plan and simulate:
+MP3 tags are read-only by default. Add `--write-tags` to `run` or incremental `analyze` to write reliable missing metadata during analysis, including original four-digit years. Existing years remain unchanged automatically; audio payloads are verified byte-for-byte and full backups retained. Adding the flag later does not revisit already Ready/Processed files.
+
+Review uncertain entries whenever convenient, then continue:
 
 ```powershell
-dotnet $dll resolve $source --workspace $workspace --reports $reports --only-unresolved
+dotnet $dll review --workspace $workspace
+dotnet $dll run --online --workspace $workspace
+```
+
+Lower-level planning and simulation remain available for diagnostics instead of automatic run:
+
+```powershell
+dotnet $dll review --workspace $workspace
 dotnet $dll plan $source $target --workspace $workspace --reports $reports
 dotnet $dll apply $source $target --workspace $workspace --reports $reports --dry-run
 ```
@@ -48,7 +69,7 @@ After inspecting the plan, explicitly copy selected files with:
 dotnet $dll apply $source $target --workspace $workspace --reports $reports
 ```
 
-Full-source resolve/plan are not limited to the last analysis batch. The source is immutable; apply writes only organized target copies/control files. Use `--edit-manual` to revisit completed decisions. Controls are **Enter = accept, Backspace = delete text, Alt+Left = previous, Esc = skip/abort folder**.
+Use `review --write-tags` to update MP3 tags after confirming a review decision. Full-source resolve/plan are not limited to the last analysis batch; apply writes only organized target copies/control files. The older `resolve --edit-manual` remains available for folder-based overrides; its controls are **Enter = accept, Backspace = delete text, Alt+Left = previous, Esc = skip/abort folder**. The new `review` command operates only on the persistent NeedsReview queue.
 
 These examples have not been executed against your library while writing this documentation. Keep workspace and reports outside both source and target.
 
@@ -69,22 +90,22 @@ The tests use a dependency-free executable test runner with assertions and nonze
 This environment denied access to the user-level NuGet configuration and rejected an escalation request. Both projects were therefore compiled with the installed .NET 10 Roslyn compiler and reference assemblies, using the already installed TagLibSharp package, without accessing that configuration or downloading dependencies:
 
 ```powershell
-.\build-offline.ps1 -OutputDirectory artifacts-progress-state
-dotnet artifacts-progress-state/Mp3Organizer.Tests.dll "path/to/test-scratch"
+.\build-offline.ps1 -OutputDirectory artifacts-playlist-import
+dotnet artifacts-playlist-import/Mp3Organizer.Tests.dll "path/to/test-scratch"
 ```
 
-The offline script accepts `-TagLibDll` for a different installed TagLibSharp 2.3.0 DLL path. It treats warnings as errors. The current prebuilt application and tests are in `artifacts-progress-state`. Standard NuGet/MSBuild restore remains unverified in this restricted environment.
+The offline script accepts `-TagLibDll` for a different installed TagLibSharp 2.3.0 DLL path. It treats warnings as errors. The current prebuilt application and tests are in `artifacts-playlist-import`. Standard NuGet/MSBuild restore remains unverified in this restricted environment.
 
 ## Safety and execution
 
-- Source file handles use `FileMode.Open`, `FileAccess.Read`, and read-only sharing. The TagLib abstraction rejects write streams, including attempted `Save()` calls. Services do not expose source rename, delete, move, or tag-save operations.
+- Ordinary source file handles use `FileMode.Open`, `FileAccess.Read`, and read-only sharing. The TagLib reader rejects write streams, including attempted `Save()` calls. Only the dedicated, explicitly enabled MP3 tag writer can replace a source file after backup and verification that its audio payload is unchanged.
 - The configured source and the supplied real-library path are protected from output writes. Overlapping roots, directory/file links and junctions, device paths, alternate data streams, path traversal, and ambiguous Windows names are rejected.
 - First use requires an empty or absent target. Later runs require its managed marker and matching source. `playlists` only operates on a managed target.
 - Planning writes reports and a checksummed JSON plan outside both libraries. It makes no target changes. Apply validates every source audio hash, the source inventory, the complete target snapshot, destination paths, mapping continuity, and playlist references before copying. `--dry-run` performs these checks and writes nothing.
 - Audio copies use uniquely named target partial files, SHA-256 verification, and a final move with overwrite disabled. Existing matching destinations are `AlreadyPresent`; collisions get a deterministic suffix in the plan. Existing different audio is never overwritten.
-- Only managed mapping/playlist/control files are deliberately replaced. Previous versions are backed up under `.mp3organizer-backups`. Unmanaged playlist collisions block the operation. Old managed playlists become empty if their tracks disappear; they are not deleted.
+- In the target, only managed mapping/playlist/control files are deliberately replaced. Previous versions are backed up under `.mp3organizer-backups`. Unmanaged playlist collisions block the operation. Old managed playlists become empty if their tracks disappear; they are not deleted. Explicit source tag edits have separate retained backups/journals under `workspace/tag-writes`.
 - After an interruption, run `plan` again: verified completed copies become `AlreadyPresent`. Partial target files remain for inspection. A missing/corrupt mapping stops processing; restore it from backup or recover its contents from the saved plan before proceeding. There is no automatic destructive cleanup.
-- No filesystem application can guarantee immutability against another process changing directory mappings concurrently or against externally configured aliases to the same share. Use a source account with read-only share/filesystem permissions for an OS-enforced boundary. The tests prove the application service paths reject source mutations; they do not assert control over other processes or server configuration. Run one organizer process per target at a time.
+- No filesystem application can guarantee immutability against another process changing directory mappings concurrently or against externally configured aliases to the same share. Use read-only source permissions when tag edits are not wanted; explicit tag writing needs write permissions. Tests cover default source immutability and the opt-in writer's audio preservation. Run one organizer process per target at a time.
 
 ## Metadata, duplicate policy, and paths
 
@@ -147,3 +168,5 @@ Plan report directories also contain a preview `playlist-index.csv`. Their `albu
 Each analysis/plan has its own report directory. Planning produces `library.csv`, `missing-tags.csv`, `duplicates.csv`, `conflicts.csv`, `albums.csv`, `copy-plan.csv`, `copy-plan.json`, and its SHA-256 checksum. Analysis produces the applicable inventory reports without a copy plan. CSV uses UTF-8, quoted fields, invariant numeric formatting, and spreadsheet formula neutralization.
 
 Summary album counts use normalized album owner/title/year. Loose tracks mean missing album tags. Unreadable files are counted in total files and errors but not misclassified as confirmed missing tags. `conflicts.csv` distinguishes blocking issues from resolved filename collisions. Exact destination paths appear in `copy-plan.csv`.
+
+

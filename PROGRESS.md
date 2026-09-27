@@ -1,6 +1,6 @@
 # Incremental collection progress
 
-This extension uses the existing scanner, read-only TagLib reader, AudioMetadata model, SQLite wrapper, identification cache, manual resolver and reporting services. No source move, rename, tag-write or delete operation was added.
+This extension uses the existing scanner, read-only TagLib reader, AudioMetadata model, SQLite wrapper, identification cache, manual resolver and reporting services. The current extension adds [runtime LLM recognition, year enrichment, review, and explicit verified tag edits](RECOGNITION.md). Source audio is never re-encoded, moved, renamed or deleted. The processing database remains authoritative for state.
 
 ## Components
 
@@ -15,7 +15,7 @@ This extension uses the existing scanner, read-only TagLib reader, AudioMetadata
 
 Default location: `<workspace>/music-organizer.db`, separate from `<workspace>/cache.db` and authoritative `manual-resolutions.json`. Use the same workspace across commands. Workspace must be outside the source; continue keeping it outside the organized target too.
 
-See [progress-schema.sql](progress-schema.sql) for the full schema. Schema version 1 uses WAL, synchronous FULL and bound SQL parameters. Windows native SQLite is reused; no package installation is needed.
+See [progress-schema.sql](progress-schema.sql) for the full schema. Schema version 3 uses WAL, synchronous FULL and bound SQL parameters. Windows native SQLite is reused; no package installation is needed.
 
 `music_files` contains Id (GUID), SourceRoot, OriginalPath, CurrentPath, FileSize, LastWriteTimeUtc, SHA256, Artist, Album, Title, TrackNumber, Year, Bitrate, Status, LastProcessedUtc, ErrorMessage, and separate original/basic and effective metadata JSON. The JSON includes album artist, disc, duration and per-field provenance. `processing_history` appends status events and timestamps. Each file result and its history entry commit together.
 
@@ -39,11 +39,11 @@ Missing/inaccessible entries are not deleted from the index. Scanner warnings ar
 | Skipped | Explicitly skipped state, reserved for future workflow use |
 | Error | Failed scan/analysis; stored message; requires reset-errors or a changed file |
 
-`status` shows all counts, missing/unreliable artist and album, missing track/year, and percentage complete. Complete means Ready + Processed + Skipped divided by total. Ready does **not** mean copied. NeedsReview and Error are excluded from completion, but are not repeatedly analyzed automatically.
+`status` shows Ready to apply, Pending analysis, Processed, Needs review and other counts. Completion now means Processed + Skipped divided by total; Ready is excluded because copying is unfinished. Normal `run` carries Ready through validated copying to Processed. NeedsReview and Error are excluded from completion and left alone. See [RUN.md](RUN.md). Source-folder and source-playlist counts are also reported; see [FOLDERS.md](FOLDERS.md) for schema migration and the audit of legacy Ready/Processed results.
 
 ## Bounded analysis
 
-`analyze --limit N` takes only Discovered/Analyzed entries in discovery order. The limit bounds attempted files, including failures. It does not implicitly rescan the collection. A second invocation continues with the next pending entries. Each result is committed before proceeding. If the process stops during a file, only that uncommitted file may need repeating. One file failure is recorded and does not abort the batch; storage failure stops safely because durability cannot be guaranteed. Batch exit code is 3 if it encountered file errors.
+`analyze --limit N` takes only Discovered/Analyzed entries in case-insensitive full input-path order. The limit bounds attempted files, including failures. It does not implicitly rescan the collection. A second invocation continues with the next pending entries. Each result is committed before proceeding. If the process stops during a file, only that uncommitted file may need repeating. One file failure is recorded and does not abort the batch; storage failure stops safely because durability cannot be guaranteed. Batch exit code is 3 if it encountered file errors.
 
 Analysis defaults to offline and reuses manual decisions and identification cache. Add --online with the existing AcoustID/fpcalc/MusicBrainz configuration to permit network identification. --reports optionally exports identification reports from indexed effective metadata. Existing `analyze "<source>"` remains the original full-source analysis command; use `analyze --limit N` for incremental work. Other full-source commands retain their existing behavior.
 
@@ -58,14 +58,14 @@ Use one progress command at a time per workspace. A file lock prevents concurren
 - `reset-errors`: only Error entries.
 - `reset-review`: only NeedsReview entries.
 - `reset-progress`: every indexed entry becomes Discovered. Paths, identities, basic/effective metadata and history remain; current error and last-processed markers clear.
-- `reset-all`: creates a consistent SQLite backup using VACUUM INTO, then asks for exactly `RESET`. Only that exact answer clears indexed rows and processing history. Cancellation retains both progress and the backup. Backup failure prevents confirmation/reset. Database/schema remain available for a fresh scan.
+- `reset-all`: creates a consistent SQLite backup using VACUUM INTO, then asks for exactly `RESET`. Only that exact answer clears indexed rows and processing history. Cancellation retains both progress and the backup. Backup failure prevents confirmation/reset. Database/schema remain available for a fresh scan. Permanent source-folder IDs and occurrence records are retained and reconnected during that scan.
 
 Backups are named `backups/music-organizer-<UTC timestamp>-<unique suffix>.db` under the workspace. Reset-all applies **only to the progress index**. It does not erase manual decisions, identification cache, saved plans, target playlists/IDs or audio. Individual scoped resets are committed per file and can be safely repeated if interrupted.
 
 ## PowerShell examples — not executed against your library
 
 ```powershell
-$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-progress-state\Mp3Organizer.dll'
+$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-playlist-import\Mp3Organizer.dll'
 $workspace = 'E:\Mp3-Ai-test-workspace'
 
 dotnet $dll scan 'E:\Mp3-Ai-test' --workspace $workspace
@@ -87,6 +87,10 @@ The reset-file/folder examples use placeholder paths; substitute actual indexed 
 
 ## Verification
 
-The complete offline .NET 10 application and test suite compile with warnings treated as errors. 169 tests pass, including unchanged-scan read avoidance, limits, processed-file exclusion, persistence across a separate process, interruption after commit, scoped resets, forced rescan, SHA relocation/duplicates, backup-before-confirmation, backup failure, existing-workflow integration and source immutability. Tests use temporary SQLite databases, synthetic WAV fixtures and mocked identification. No real music library was scanned.
+The complete offline .NET 10 application and test suite compile with warnings treated as errors. 213 tests pass, including unchanged-scan read avoidance, limits, processed-file exclusion, persistence across a separate process, interruption after commit, scoped resets, forced rescan, SHA relocation/duplicates, backup-before-confirmation, backup failure, existing-workflow integration and source immutability. Tests use temporary SQLite databases, synthetic WAV fixtures and mocked identification. No real music library was scanned.
 
-Standard NuGet/MSBuild restore remains unverified due to the existing environment restriction. Rebuild this output with `./build-offline.ps1 -OutputDirectory artifacts-progress-state`; run `dotnet artifacts-progress-state/Mp3Organizer.Tests.dll <scratch-directory>`.
+Standard NuGet/MSBuild restore remains unverified due to the existing environment restriction. Rebuild this output with `./build-offline.ps1 -OutputDirectory artifacts-playlist-import`; run `dotnet artifacts-playlist-import/Mp3Organizer.Tests.dll <scratch-directory>`.
+
+
+
+

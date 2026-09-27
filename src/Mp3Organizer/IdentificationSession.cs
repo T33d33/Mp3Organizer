@@ -26,6 +26,9 @@ public sealed class IdentificationSession : IDisposable
             new MusicBrainzClient(new IdentificationHttp(http,cache,BrainzLimit,Clock),agent), online, online || identifyAll||rebuildFingerprints,progress),cache,online);
         if(workspace!=null){ManualStore=new(workspace,source,target);Resolver=new ManualMetadataResolver(Resolver,ManualStore,refreshIdentification);}
         Resolver=new YearEnrichmentResolver(Resolver,new AlbumYearClient(new IdentificationHttp(http,cache,BrainzLimit,Clock),cache,agent),online,progress);
+        List<IndexedMusic> persisted=[];
+        if(workspace!=null&&File.Exists(Path.Combine(workspace,"music-organizer.db"))){using var repository=new ProgressRepository(workspace);persisted=repository.All();}
+        Resolver=new PolicyInputResolver(Resolver,persisted);
     }
     public static List<AudioMetadata> ResolveAll(IReadOnlyList<AudioMetadata> rows, IMetadataResolver resolver, bool identifyAll, Action<string>? progress = null)
     {

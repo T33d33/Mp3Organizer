@@ -2,21 +2,27 @@ namespace Mp3Organizer;
 
 public sealed class CopyPlanBuilder
 {
-    public CopyPlan Build(string source, string target, IMetadataResolver? resolver = null, bool identifyAll = false, Action<string>? progress = null)
+    public CopyPlan Build(string source, string target, IMetadataResolver? resolver = null, bool identifyAll = false, Action<string>? progress = null,IReadOnlyList<AudioMetadata>? readyInventory=null,string? workspace=null)
     {
         source = PathSafetyGuard.Canonical(source); target = PathSafetyGuard.Canonical(target);
         PathSafetyGuard.Separate(source, target);
         ManagedTarget.Check(target, source);
-        var plan = new CopyPlan { Source = source, Target = target, ExpectedTargetSnapshot = TargetSnapshot.Hash(target) };
+        var plan = new CopyPlan { MetadataPolicyVersion=2,Source = source, Target = target, ExpectedTargetSnapshot = TargetSnapshot.Hash(target),SelectedInventoryOnly=readyInventory!=null,ProgressWorkspace=workspace!=null&&File.Exists(Path.Combine(workspace,"music-organizer.db"))?workspace:"" };
         var scanner = new AudioFileScanner();
         var reader = new TagLibMetadataReader(new ReadOnlySource());
         progress?.Invoke("Scanning source and reading metadata/SHA-256...");
-        var inventory = scanner.Scan(source).Select(path=>{progress?.Invoke("Reading: "+Path.GetFileName(path));return reader.Read(path);}).ToList();
+        var inventory = readyInventory?.OrderBy(x=>x.FullPath,StringComparer.OrdinalIgnoreCase).ToList()??scanner.Scan(source).Select(path=>{progress?.Invoke("Reading: "+Path.GetFileName(path));return reader.Read(path);}).ToList();
         plan.Conflicts.AddRange(scanner.Errors);
         plan.Conflicts.AddRange(inventory.Where(x => x.Error != "").Select(x => "Metadata read failed: " + x.FullPath + ": " + x.Error));
         if (resolver != null) inventory = IdentificationSession.ResolveAll(inventory,resolver,identifyAll,progress);
         progress?.Invoke("Calculating duplicates, target paths and playlists...");
-        var selection = new DuplicateDetector(new Sha256EquivalenceVerifier()).Select(inventory.Where(x => x.Error == "").ToList());
+        var blocked=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if(workspace!=null&&File.Exists(Path.Combine(workspace,"music-organizer.db")))
+        {
+            using var repository=new ProgressRepository(workspace);
+            blocked=repository.All().Where(x=>x.Status is ProcessingStatus.NeedsReview or ProcessingStatus.Error or ProcessingStatus.Skipped or ProcessingStatus.Discovered or ProcessingStatus.Analyzed).Select(x=>x.CurrentPath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+        var selection = new DuplicateDetector(new Sha256EquivalenceVerifier()).Select(inventory.Where(x => x.Error == ""&&x.Identification?.Status!="Review"&&!blocked.Contains(x.FullPath)).ToList());
         plan.Duplicates = selection.Decisions;
         var existing = Directory.Exists(target) ? scanner.Scan(target).Select(reader.Read).ToList() : new List<AudioMetadata>();
         plan.Conflicts.AddRange(scanner.Errors);
@@ -27,6 +33,13 @@ public sealed class CopyPlanBuilder
         var tracks = existing.Select(x => new CopyOperation(x, Path.GetRelativePath(target, x.FullPath), "Existing")).ToDictionary(x => x.RelativePath, StringComparer.OrdinalIgnoreCase);
         foreach (var row in selection.Selected)
         {
+            var canonical=existing.Where(x=>x.Sha256==row.Sha256&&x.Size==row.Size&&row.Sha256.Length==64).OrderBy(x=>x.FullPath,StringComparer.OrdinalIgnoreCase).FirstOrDefault();
+            if(canonical!=null)
+            {
+                var sharedPath=Path.GetRelativePath(target,canonical.FullPath);
+                plan.Operations.Add(new(row,sharedPath,"AlreadyPresent"));occupied.Add(sharedPath);
+                continue;
+            }
             var relative = TargetPathBuilder.Build(row);
             var initial = relative;
             var suffix = 1;
@@ -44,6 +57,7 @@ public sealed class CopyPlanBuilder
         }
         plan.PlaylistMap = new PlaylistMapStore().Load(target);
         plan.Playlists = new PlaylistBuilder().Build(tracks.Values.ToList(), plan.PlaylistMap);
+        FolderPlaylistService.PreserveExisting(target,plan.Playlists);
         plan.TargetMetadata = tracks.ToDictionary(x => x.Key,x => x.Value.Metadata,StringComparer.OrdinalIgnoreCase);
         PlaylistBuilder.IncludeRetired(plan.Playlists, ManagedTarget.Check(target, source));
         foreach (var playlist in plan.Playlists)

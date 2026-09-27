@@ -55,14 +55,14 @@ public sealed class ReviewService(ProgressRepository repository,string workspace
                 var store=new ManualResolutionStore(workspace,item.SourceRoot);var manual=store.Load();var key="sha256:"+item.Basic.Sha256.ToLowerInvariant();
                 manual.Files[key]=new(){LastKnownPath=item.CurrentPath,Artist=selected.Artist,AlbumArtist=selected.AlbumArtist,Album=selected.Album,Title=selected.Title,TrackNumber=selected.Track,DiscNumber=selected.Disc==0?null:selected.Disc,Year=selected.Year==0?null:selected.Year};store.Save(manual);
                 var updated=ManualMetadataResolver.Apply(row,manual.Files[key]);
-                updated=updated with{Identification=evidence with{Status="ManualResolved",Source=MetadataSource.FileManualOverride,ManualOverrideHit=true,AutoRecognized=false,ReviewReasons=[],ReviewReason="",FieldSources=MetadataFieldMerger.ManualSources(evidence,null,manual.Files[key])}};
+                updated=updated with{Identification=evidence with{MetadataPolicyVersion=2,Status="ManualResolved",RecognitionMethod="Manual",Source=MetadataSource.FileManualOverride,ManualOverrideHit=true,AutoRecognized=false,ReviewReasons=[],ReviewReason="",FieldSources=MetadataFieldMerger.ManualSources(evidence,null,manual.Files[key])}};
                 var accepted=item with{Effective=updated,Status=ProcessingStatus.Ready,LastProcessedUtc=DateTime.UtcNow.ToString("O"),ErrorMessage=""};
                 try
                 {
                     if(tags!=null)tags.WriteAndSave(accepted,true);
                     else repository.Save(accepted,"Manual review confirmed; authoritative override saved");
                 }
-                catch(Exception ex) when(ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+                catch(Exception ex) when(ex is IOException or UnauthorizedAccessException or InvalidOperationException or TagLib.CorruptFileException or TagLib.UnsupportedFormatException)
                 {repository.Save(accepted with{Status=ProcessingStatus.Error,ErrorMessage=ex.Message},"Review accepted, tag operation failed; backup/journal retained");console.Write(ex.Message);}
                 handled++;break;
             }

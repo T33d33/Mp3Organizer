@@ -11,14 +11,14 @@ public static class MetadataFieldMerger
             bool Valid(string? value)=>!string.IsNullOrWhiteSpace(value)&&!MetadataQualityEvaluator.Invalid(value)&&(name!="Title"||!MetadataQualityEvaluator.FilenameTitle(tags with{Title=value}));
             if(Valid(original)){sources[name]="Tags";return original;}
             if(Valid(online)){sources[name]="AcoustIdMusicBrainz";return online!;}
-            if(Valid(lower)){sources[name]="FolderFallback";return lower;}
+            if(Valid(lower)){sources[name]="FilenameFallback";return lower;}
             sources[name]="Unresolved";return "";
         }
         uint Number(string name,uint original,uint? online,uint lower)
         {
             if(original>0){sources[name]="Tags";return original;}
             if(online>0){sources[name]="AcoustIdMusicBrainz";return online.Value;}
-            sources[name]=lower>0?"FolderFallback":"Unresolved";return lower;
+            sources[name]=lower>0?"FilenameFallback":"Unresolved";return lower;
         }
         var artist=Text("Artist",tags.Artist,recording?.Artist,fallback.Artist);
         var year=Number("Year",tags.Year,release?.Year,fallback.Year);

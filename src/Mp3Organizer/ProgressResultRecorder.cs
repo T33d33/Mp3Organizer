@@ -12,6 +12,8 @@ public static class ProgressResultRecorder
         foreach(var row in rows)
         {
             if(!indexed.TryGetValue(row.FullPath,out var item)||row.Sha256!=item.Basic.Sha256)continue;
+            if(item.Status is ProcessingStatus.Error or ProcessingStatus.Skipped||item.Status==ProcessingStatus.NeedsReview&&(copied||row.Identification?.Status!="ManualResolved"))continue;
+            if(copied&&(row.Identification?.Status=="Review"||ManualMetadataResolver.NeedsInput(row)))continue;
             var status=row.Error!=""?ProcessingStatus.Error:copied?ProcessingStatus.Processed:
                 row.Identification?.Status=="Review"||ManualMetadataResolver.NeedsInput(row)?ProcessingStatus.NeedsReview:ProcessingStatus.Ready;
             if(!copied&&item.Status==ProcessingStatus.Processed&&status==ProcessingStatus.Ready)status=ProcessingStatus.Processed;

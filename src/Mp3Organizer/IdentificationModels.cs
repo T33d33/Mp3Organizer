@@ -1,12 +1,13 @@
 namespace Mp3Organizer;
 
-public enum MetadataSource { Tags, AcoustIdMusicBrainz, FolderFallback, FolderManualOverride, FileManualOverride }
+public enum MetadataSource { Tags, AcoustIdMusicBrainz, FolderFallback, FolderManualOverride, FileManualOverride, FilenameFallback }
 public sealed record TagMetadata(string Artist, string AlbumArtist, string Album, string Title, uint Track, uint Disc, uint Year)
 {
     public static TagMetadata From(AudioMetadata x) => new(x.Artist, x.AlbumArtist, x.Album, x.Title, x.Track, x.Disc, x.Year);
 }
 public sealed record IdentificationEvidence
 {
+    public int MetadataPolicyVersion {get;init;}
     public TagMetadata Original { get; init; } = new("", "", "", "", 0, 0, 0);
     public Dictionary<string,string> FieldSources {get;init;}=new();
     public Dictionary<string,string>? BeforeManualFieldSources {get;init;}
@@ -19,10 +20,17 @@ public sealed record IdentificationEvidence
     public bool AutoRecognized {get;init;}
     public string[] ReviewReasons {get;init;}=[];
     public List<RecognitionCandidate> Candidates {get;init;}=[];
+    public bool CandidatesComplete {get;init;}=true;
     public string YearSource {get;init;}="";
     public double YearConfidence {get;init;}
     public bool YearEnriched {get;init;}
     public string AlbumGroupId {get;init;}="";
+    public string RecognitionMethod {get;init;}="Deterministic";
+    public string CodexModel {get;init;}="";
+    public CodexDecision? CodexDecision {get;init;}
+    public bool CodexUnavailable {get;init;}
+    public string CodexFailureKind {get;init;}="";
+    public string CodexValidation {get;init;}="";
     public bool ConfidentRecording { get; init; }
     public string Status { get; init; } = "TagsAccepted";
     public string ReviewReason { get; init; } = "";
@@ -44,3 +52,4 @@ public interface IAudioFingerprintService { Task<AudioFingerprint?> FingerprintA
 public interface IAcoustIdClient { Task<AcousticLookup> LookupAsync(AudioFingerprint fingerprint, bool online, CancellationToken ct = default); }
 public interface IMusicBrainzClient { Task<RecordingLookup> LookupAsync(string recordingId, bool online, CancellationToken ct = default); }
 public interface IMetadataResolver { Task<AudioMetadata> ResolveAsync(AudioMetadata file, IReadOnlyList<AudioMetadata> neighbors, bool identifyAll = false, CancellationToken ct = default); }
+

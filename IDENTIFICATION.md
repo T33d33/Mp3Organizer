@@ -1,6 +1,6 @@
 # Optional acoustic identification
 
-Source audio remains immutable. Neither embedded tags nor copied target audio tags are rewritten. The only data sent to AcoustID is the compressed fingerprint, whole-file duration, application key, and lookup parameters. MusicBrainz receives recording IDs and metadata-query parameters. Audio bytes, local filenames, paths, and embedded tags are never uploaded.
+Source audio is never re-encoded. By default source tags are read-only; the new explicit --write-tags mode permits verified MP3 tag edits. See [runtime recognition](RECOGNITION.md). The only data sent to AcoustID is the compressed fingerprint, whole-file duration, application key, and lookup parameters. MusicBrainz receives recording IDs and metadata-query parameters. Audio bytes are never uploaded. Runtime LLM reasoning in incremental analysis sends structured filenames, paths, tags and candidate evidence to OpenAI; AcoustID/MusicBrainz keep the limited payloads described above.
 
 ## Commands and configuration
 
@@ -24,7 +24,7 @@ Options for `identify`, `analyze`, and `plan`:
 
 | Option | Behavior |
 |---|---|
-| omitted `--online` | No network calls; use tags, cached identification, then folder fallback. |
+| omitted `--online` | No network calls; use tags, cached identification, then filename fallback. |
 | `--online` | Permit lookup for files needing resolution. |
 | `--offline` | Explicitly state the default no-network mode. |
 | `--identify-all` | Request fingerprint identification even for well-tagged files; cached fingerprints can be reused. Good tags are still preserved. Can run local fingerprinting without network access. |
@@ -46,21 +46,21 @@ Use the same `--workspace` across identify, resolve, plan, apply and playlists. 
 | `IAcoustIdClient` / `AcoustIdClient` | Fingerprint-only lookup; parse recording candidates. |
 | `IMusicBrainzClient` / `MusicBrainzClient` | Recording and paginated release/track lookup. |
 | `IMetadataResolver` / `MetadataResolver` | Select effective fields, preserve originals, report evidence and uncertainty. |
-| `MetadataQualityEvaluator` | Missing/generic/malformed fields, filename-like titles, strong folder-album disagreement. |
-| `CachedMetadataResolver` | Reuse confident resolutions, including results of prior `--identify-all`; invalidate on file/tag/folder-consensus changes. |
+| `MetadataQualityEvaluator` | Missing/generic/malformed fields, filename-like titles, independent per-file evaluation. |
+| `CachedMetadataResolver` | Reuse confident resolutions, including results of prior `--identify-all`; invalidate on file/tag/policy/context changes. |
 | `IdentificationHttp`, `RequestRateLimiter`, `IdentificationCache` | Throttling, retry/backoff, local response and failure caching. |
-| `FolderMetadataFallback` | Low-confidence last fallback; remove uploader/bitrate noise. |
+| `FilenameMetadataFallback` | Filename-only hints; directory names never assign metadata. |
 | `TargetMetadataStore` | Preserve effective metadata across future playlist regeneration without rewriting audio. |
 
-Complete plausible embedded artist/title/album tags normally skip fingerprinting and HTTP. Missing year alone does not trigger online lookup. Known generic values, embedded URLs/uploader text, a title ending in an audio extension, and generic numbered titles trigger review/identification. Strong album disagreement requires at least three neighboring tags and an 80% majority. Evaluation uses per-folder summaries to avoid rescanning every neighboring tag for every well-tagged track.
+Complete plausible embedded artist/title/album tags normally skip fingerprinting and HTTP in the base resolver. The year-enrichment stage may separately query a missing original year. Generic values, URLs/uploader text, filename-like titles and generic track names trigger review. Neighboring tags do not invalidate a different album or supply an album/year; arbitrary source collections require no classification.
 
 The current conservative policy requires an AcoustID score of at least 0.90 and no other plausible recording (score at least 0.85) within 0.05 of the best score. These scores are matching evidence, **not calibrated probabilities**. Recording duration discrepancies above three seconds trigger review. Good artist/title fields that disagree with the candidate are retained and flagged instead of replaced.
 
-Album releases need agreement with existing album tags or a substantial neighboring album consensus. Year, track, disc, and album artist provide additional evidence. Ties and weak matches leave the effective album, album artist, track/disc/year unresolved; artist/title may still be confidently identified. The resolver never selects the first listed compilation/reissue merely because a recording appears there. Release browsing follows actual page lengths because MusicBrainz may return fewer releases than requested. More than 500 releases, incomplete pagination, or unavailable release data leaves the album unresolved.
+Deterministic release selection requires independent album metadata. Year, track, disc and album artist provide additional evidence. Folder names and neighboring-track consensus cannot establish album identity. Ties preserve useful fields and leave missing fields unresolved. The optional LLM can select factual candidates only through its existing hard validation. Release pagination and conservative compilation handling remain unchanged.
 
-If identification is unavailable or unreliable, valid embedded fields are retained and missing/bad fields may use cleaned folder/filename hints. `Cypress Hill - Kingpin OST-uppedByTeedee` can suggest Cypress Hill / Kingpin OST. `Cuphead OST` only suggests an album, never a performer by itself. Such results remain `Review`; the fallback does not represent an online match.
+If identification is unavailable, valid embedded fields are retained and missing fields may use filename hints. Directory names such as Christmas or Cypress Hill - Kingpin OST supply no Artist, Album, Year or TrackNumber. Explicit user-entered folder overrides remain supported. See [FOLDERS.md](FOLDERS.md) for independent source grouping and migration.
 
-`IdentificationEvidence` keeps original artist, album artist, album, title, track, disc, and year; source (`Tags`, `AcoustIdMusicBrainz`, `FolderFallback`); scores/IDs; confidence, status, review reason, and evidence. Effective fields feed target paths, grouping, playlists, duplicate candidates, and reports.
+`IdentificationEvidence` keeps original artist, album artist, album, title, track, disc, and year; source (`Tags`, `AcoustIdMusicBrainz`, `FilenameFallback`); scores/IDs; confidence, status, review reason, and evidence. Effective fields feed target paths, grouping, playlists, duplicate candidates, and reports.
 
 Plan JSON contains effective target metadata. `apply` persists it in `.mp3organizer-metadata.json`, an application-managed, backed-up sidecar. Future planning/playlist generation uses those fields only while the copied audio's SHA-256 and size still match. A missing managed sidecar stops regeneration instead of silently reverting IDs/names. Original audio tags are untouched.
 
@@ -90,3 +90,6 @@ dotnet .\artifacts\Mp3Organizer.Tests.dll "C:\Music-test-scratch"
 ```
 
 Tests use only synthetic audio and mocked HTTP. The real source library has not been accessed, and no live AcoustID/MusicBrainz identification requests have been made. `fpcalc` was not found on PATH in the development environment, so its real decoder/output compatibility remains a local integration check after installation. The executable adapter, caching, and resolution flow compile and are covered by isolated service tests; service HTTP behavior is covered with mocked responses.
+
+
+

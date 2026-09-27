@@ -13,9 +13,10 @@ public sealed class ShaProgressIdentityMatcher:IProgressIdentityMatcher
     }
 }
 public sealed record IncrementalScanResult(int Added,int Updated,int Unchanged,IReadOnlyList<string> Errors);
-public sealed class IncrementalProgressService(ProgressRepository repository,Func<string,AudioMetadata>? reader=null,IProgressIdentityMatcher? identity=null,Mp3TagWriteService? tagWriter=null)
+public sealed class IncrementalProgressService(ProgressRepository repository,Func<string,AudioMetadata>? reader=null,IProgressIdentityMatcher? identity=null,Mp3TagWriteService? tagWriter=null,CodexRunState? codexState=null,Func<CodexServiceException,bool>? continueWithoutCodex=null)
 {
     public int LastErrorCount {get;private set;}
+    public bool StoppedForCodex {get;private set;}
     private readonly Func<string,AudioMetadata> read=reader??new TagLibMetadataReader(new ReadOnlySource()).Read;
     private readonly IProgressIdentityMatcher matcher=identity??new ShaProgressIdentityMatcher();
     public IncrementalScanResult Scan(string source,bool force=false,Action<string>? progress=null)
@@ -35,6 +36,7 @@ public sealed class IncrementalProgressService(ProgressRepository repository,Fun
                 progress?.Invoke("Reading changed/new file: "+path);
                 var basic=read(path);
                 if(old==null){old=matcher.Match(basic,missing);if(old!=null)missing.Remove(old);}
+                if(old!=null&&old.Basic.Sha256==basic.Sha256)basic=basic with{SuppressedAutomaticFields=old.Basic.SuppressedAutomaticFields};
                 var same=old!=null&&basic.Sha256.Length==64&&basic.Sha256==old.Basic.Sha256&&TagMetadata.From(basic)==TagMetadata.From(old.Basic)&&basic.Error==old.Basic.Error;
                 var effective=same?ProgressRepository.At(old!.Effective,path):basic;
                 var status=basic.Error!=""?ProcessingStatus.Error:same?old!.Status:ProcessingStatus.Discovered;
@@ -51,13 +53,16 @@ public sealed class IncrementalProgressService(ProgressRepository repository,Fun
                 repository.Save(new(old?.Id??Guid.NewGuid().ToString("N"),source,old?.OriginalPath??path,path,basic,old?.Effective??basic,ProcessingStatus.Error,old?.LastProcessedUtc,e.Message),"Scan error");
             }
         }
+        repository.RegisterFolders(source,paths,scanner.Errors.Count==0,progress);
+        repository.RegisterSourcePlaylists(source,scanner.Playlists,scanner.Errors.Count==0,progress);
         return new(added,updated,unchanged,errors);
     }
     public async Task<int> AnalyzeAsync(int limit,Func<string,IMetadataResolver> resolverForRoot,Action<string>? progress=null)
     {
         if(limit<1)throw new ArgumentOutOfRangeException(nameof(limit));
         LastErrorCount=0;
-        var all=repository.All();var pending=all.Where(x=>x.Status is ProcessingStatus.Discovered or ProcessingStatus.Analyzed).Take(limit).ToList();
+        StoppedForCodex=false;
+        var all=repository.All();var pending=all.Where(x=>x.Status is ProcessingStatus.Discovered or ProcessingStatus.Analyzed).OrderBy(x=>x.CurrentPath,StringComparer.OrdinalIgnoreCase).Take(limit).ToList();
         var folders=all.GroupBy(x=>Path.GetDirectoryName(x.CurrentPath)!,StringComparer.OrdinalIgnoreCase).ToDictionary(x=>x.Key,x=>(IReadOnlyList<AudioMetadata>)x.Select(y=>y.Basic).ToList(),StringComparer.OrdinalIgnoreCase);
         var count=0;
         foreach(var item in pending)
@@ -72,14 +77,28 @@ public sealed class IncrementalProgressService(ProgressRepository repository,Fun
                 var basic=item.Basic.Error!=""||info.Length!=item.Basic.Size||info.LastWriteTimeUtc!=item.Basic.LastWriteTimeUtc?read(item.CurrentPath):item.Basic;
                 if(basic.Error!="")throw new IOException(basic.Error);
                 var resolver=resolverForRoot(item.SourceRoot);
-                if(resolver is IInventoryAwareMetadataResolver aware)aware.SetInventory(all.Select(x=>x.Basic).ToList());
-                var neighbors=folders[Path.GetDirectoryName(item.CurrentPath)!].Select(x=>x.FullPath.Equals(item.CurrentPath,StringComparison.OrdinalIgnoreCase)?basic:x).ToList();
-                var task=Task.Run(()=>resolver.ResolveAsync(basic,neighbors));
+                repository.Save(item with{Basic=basic,Status=ProcessingStatus.Analyzed,ErrorMessage=""},"Analysis started; retryable until resolution completes");
+                if(basic.Sha256==item.Basic.Sha256)basic=basic with{SuppressedAutomaticFields=item.Basic.SuppressedAutomaticFields};
+                if(resolver is IInventoryAwareMetadataResolver aware)aware.SetInventory(all.Select(x=>MetadataPolicy.Sanitize(x.Basic)).ToList());
+                var neighbors=folders[Path.GetDirectoryName(item.CurrentPath)!].Select(x=>MetadataPolicy.Sanitize(x.FullPath.Equals(item.CurrentPath,StringComparison.OrdinalIgnoreCase)?basic:x)).ToList();
+                var task=Task.Run(()=>resolver.ResolveAsync(MetadataPolicy.Sanitize(basic),neighbors));
                 while(await Task.WhenAny(task,Task.Delay(TimeSpan.FromSeconds(3)))!=task)progress?.Invoke("Still analyzing: "+item.CurrentPath);
                 var resolved=await task;
+                resolved=resolved with{Identification=(resolved.Identification??new()) with{MetadataPolicyVersion=2}};
                 if(resolved.Error!="")throw new IOException(resolved.Error);
                 var status=resolved.Identification?.Status=="Review"||ManualMetadataResolver.NeedsInput(resolved)?ProcessingStatus.NeedsReview:ProcessingStatus.Ready;
                 completed=item with{Basic=basic,Effective=resolved,Status=status,LastProcessedUtc=DateTime.UtcNow.ToString("O"),ErrorMessage=""};
+            }
+            catch(CodexPendingException e)
+            {
+                // Commit before presenting a choice. Analyzed remains eligible on the next run.
+                var waiting=item with{Effective=e.Metadata,Status=ProcessingStatus.Analyzed,ErrorMessage="Waiting for Codex: "+e.Message};
+                repository.Save(waiting,"Codex pending; deterministic candidates preserved");
+                progress?.Invoke("Progress saved. Codex "+e.Failure.Kind+": "+e.Message);
+                if(e.Failure.Kind is CodexFailureKind.AuthenticationConfiguration or CodexFailureKind.InvalidRequest||codexState==null||continueWithoutCodex?.Invoke(e.Failure)!=true)
+                {StoppedForCodex=true;break;}
+                codexState.Unavailable=e.Failure;
+                completed=waiting with{Effective=CodexRunState.Fallback(e.Metadata,e.Failure),Status=ProcessingStatus.NeedsReview,LastProcessedUtc=DateTime.UtcNow.ToString("O"),ErrorMessage=""};
             }
             catch(Exception e) when(e is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException or System.ComponentModel.Win32Exception)
             {completed=item with{Status=ProcessingStatus.Error,LastProcessedUtc=DateTime.UtcNow.ToString("O"),ErrorMessage=e.Message};}
