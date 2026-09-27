@@ -1,9 +1,9 @@
 # Normal workflow: scan, then run
 
-Use the current **artifacts-playlist-import** build. `scan` finds files; `run` performs pending analysis and then organized copying automatically. API configuration remains documented in [RECOGNITION.md](RECOGNITION.md). The lower-level commands remain available for diagnostics.
+Use the current **artifacts-review-scope** build. `scan` finds files; `run` performs pending analysis and then organized copying automatically. API configuration remains documented in [RECOGNITION.md](RECOGNITION.md). The lower-level commands remain available for diagnostics.
 
 ```powershell
-$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-playlist-import\Mp3Organizer.dll'
+$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-review-scope\Mp3Organizer.dll'
 $workspace = 'E:\Mp3-Ai-test-workspace'
 
 dotnet $dll scan 'E:\Mp3-Ai-test' --workspace $workspace
@@ -32,7 +32,7 @@ The target choice is persisted in the same SQLite database and reused on later r
 4. Validate Ready source content, build a selected-inventory copy plan with the existing duplicate/path/playlist services, save its JSON/checksum and CSV reports, reload it, and execute it through the existing guarded validator/copy executor.
 5. After successful verified copying and playlist generation, persist `Processed` for the fulfilled Ready entries. Byte-identical duplicates selected out of the copy set are fulfilled by their verified equivalent target copy and also become Processed. Non-identical candidates remain separate under the existing conservative rules.
 6. Regenerate Folder playlists using the source-to-target mappings persisted after successful copying. This stage also runs with zero Ready files, preserving repetitions and updating scanned membership/order changes. Pending members are omitted and counted. A failure during this final regeneration is retryable on the next run; already verified copies remain Processed.
-7. During that final regeneration, also rebuild discovered source playlists under `_Playlist-Folder\Code Playlist <id> - <name>.m3u8`, using verified canonical targets. Order/repetitions are retained, unresolved entries are reported, and permanent playlist codes are included in the index. See [PLAYLIST-IMPORT.md](PLAYLIST-IMPORT.md).
+7. During that final regeneration, also rebuild discovered source playlists under `_Playlist-Folder\[PL-0001] <name>.m3u8`, using verified canonical targets. Order/repetitions are retained, unresolved entries are reported, and permanent playlist codes are included in the index. See [PLAYLIST-IMPORT.md](PLAYLIST-IMPORT.md).
 
 `Ready` is an intermediate state meaning **Ready to apply**, not completion. `run` carries valid persisted Ready entries through the downstream stage. Legacy Ready metadata must first pass the migration audit; unsupported results are reassessed instead of blindly copied.
 
@@ -82,5 +82,8 @@ Source tags remain read-only by default. `--write-tags` retains the existing exp
 Return codes: 0 = run completed (review items may remain); 1 = configuration/plan/global operation failure; 3 = newly encountered per-file analysis/preflight errors; 4 = clean Codex stop with progress saved. Existing Error rows alone do not fail an otherwise successful run. LLM batch and cumulative statistics are unchanged.
 
 To inspect/simulate copying instead of executing it, retain the lower-level `analyze`, `plan`, and `apply --dry-run` workflow. Normal `run` performs the saved, validated plan automatically and does not ask for a separate apply confirmation.
+
+
+
 
 

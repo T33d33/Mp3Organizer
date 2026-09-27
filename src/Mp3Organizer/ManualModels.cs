@@ -4,6 +4,10 @@ namespace Mp3Organizer;
 
 public sealed record ManualOverride
 {
+    public string[]? ReviewFileIds {get;init;}
+    public bool AlbumSetupConfirmed {get;init;}
+    public bool ProvisionalAlbumArtist {get;init;}
+    public bool ConfirmedLooseTrack {get;init;}
     public string LastKnownPath {get;init;}="";
     public string[]? AnchorSha256 {get;init;}
     public string? Artist {get;init;}
@@ -12,6 +16,7 @@ public sealed record ManualOverride
     public string? Title {get;init;}
     public uint? TrackNumber {get;init;}
     public uint? DiscNumber {get;init;}
+    public bool YearTrackOnly {get;init;}
     public uint? Year {get;init;}
 }
 public sealed class ManualResolutions

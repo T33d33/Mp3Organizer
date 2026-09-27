@@ -24,9 +24,10 @@ public sealed class RunPipelineService(ProgressRepository repository,string work
     public int ApplyReady(IReadOnlyDictionary<string,string> targets,string reports,Action<string>? progress=null)
     {
         MetadataPolicy.Migrate(repository,workspace,progress);
-        ErrorCount=0;var count=0;
+        ErrorCount=0;var count=0;var yearCorrections=new AlbumYearCorrectionService(repository,workspace);yearCorrections.Propagate();
         foreach(var pair in targets.OrderBy(x=>x.Key,StringComparer.OrdinalIgnoreCase))
         {
+            yearCorrections.Reconcile(pair.Key,pair.Value,progress);
             var ready=new List<IndexedMusic>();
             foreach(var item in repository.All().Where(x=>x.SourceRoot.Equals(pair.Key,StringComparison.OrdinalIgnoreCase)&&x.Status==ProcessingStatus.Ready).OrderBy(x=>x.CurrentPath,StringComparer.OrdinalIgnoreCase))
             {

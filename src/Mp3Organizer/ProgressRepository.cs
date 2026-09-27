@@ -14,7 +14,7 @@ public sealed partial class ProgressRepository : IDisposable
         Directory.CreateDirectory(Path.GetDirectoryName(DatabasePath)!);db=new(DatabasePath);
         try
         {
-            var version=db.Query("PRAGMA user_version")[0][0];if(version is not ("0" or "1" or "2" or "3"))throw new IOException("Unsupported progress database version: "+version);
+            var version=db.Query("PRAGMA user_version")[0][0];if(version is not ("0" or "1" or "2" or "3" or "4"))throw new IOException("Unsupported progress database version: "+version);
             db.Query("PRAGMA journal_mode=WAL");db.Query("PRAGMA synchronous=FULL");
             db.Query("CREATE TABLE IF NOT EXISTS music_files (id TEXT PRIMARY KEY, source_root TEXT NOT NULL, original_path TEXT NOT NULL, current_path TEXT NOT NULL COLLATE NOCASE UNIQUE, file_size INTEGER NOT NULL, last_write_time_utc TEXT NOT NULL, sha256 TEXT NOT NULL, artist TEXT NOT NULL, album TEXT NOT NULL, title TEXT NOT NULL, track_number INTEGER NOT NULL, year INTEGER NOT NULL, bitrate INTEGER NOT NULL, status TEXT NOT NULL, last_processed_utc TEXT, error_message TEXT NOT NULL, basic_json TEXT NOT NULL, effective_json TEXT NOT NULL)");
             db.Query("CREATE TABLE IF NOT EXISTS processing_history (sequence INTEGER PRIMARY KEY AUTOINCREMENT, file_id TEXT NOT NULL, event_utc TEXT NOT NULL, status TEXT NOT NULL, reason TEXT NOT NULL)");
@@ -23,7 +23,7 @@ public sealed partial class ProgressRepository : IDisposable
             db.Query("CREATE TABLE IF NOT EXISTS recognition_evidence (file_id TEXT PRIMARY KEY, recognition_confidence REAL NOT NULL, auto_recognized INTEGER NOT NULL, year_source TEXT NOT NULL, year_confidence REAL NOT NULL, year_enriched INTEGER NOT NULL, candidates_json TEXT NOT NULL, review_reasons_json TEXT NOT NULL)");
             db.Query("CREATE INDEX IF NOT EXISTS ix_music_status ON music_files(status)");db.Query("CREATE INDEX IF NOT EXISTS ix_music_sha ON music_files(sha256)");
             db.Query("BEGIN IMMEDIATE");
-            try{InitializeFolders();InitializeSourcePlaylists();db.Query("PRAGMA user_version=3");db.Query("COMMIT");}
+            try{InitializeFolders();InitializeSourcePlaylists();db.Query("PRAGMA user_version=4");db.Query("COMMIT");}
             catch{db.Query("ROLLBACK");throw;}
         }
         catch{db.Dispose();throw;}

@@ -45,6 +45,9 @@ public sealed class ManagedPlaylistWriter
     {
         PathSafetyGuard.Separate(source, target);
         var state = ManagedTarget.Check(target, source) ?? throw new IOException("Not a managed target.");
+        var migrated=state.Playlists.Where(x=>x.Replace('\\','/').StartsWith("_Playlist-Folder/",StringComparison.OrdinalIgnoreCase)
+            &&playlists.Any(p=>p.RelativePath.Equals(Path.Combine("_Playlists","Original Playlists",Path.GetFileName(x)),StringComparison.OrdinalIgnoreCase))).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        playlists=playlists.Where(x=>!migrated.Contains(x.RelativePath)).ToList();
         PlaylistMapStore.Validate(map);
         PlaylistMapStore.ValidateExtension(new PlaylistMapStore().Load(target), map);
         PlaylistIndexBuilder.ValidateDestination(target, source, state);
@@ -61,7 +64,17 @@ public sealed class ManagedPlaylistWriter
         if (metadata != null) Replace(TargetMetadataStore.FileName,JsonFormat.Serialize(metadata));
         foreach (var playlist in playlists) Replace(playlist.RelativePath, playlist.Content);
         Replace(PlaylistIndexBuilder.FileName, index);
-        Replace(ManagedTarget.Marker, JsonFormat.Serialize(new ManagedTargetState(1, source, state.Playlists.Concat(playlists.Select(x => x.RelativePath)).Distinct(StringComparer.OrdinalIgnoreCase).ToList(), true, state.MetadataManaged || metadata != null)));
+        foreach(var retired in migrated)
+        {
+            var oldPath=PathSafetyGuard.Destination(target,retired,source);
+            if(!File.Exists(oldPath))continue;
+            var backup=PathSafetyGuard.Destination(target,Path.Combine(".mp3organizer-backups",Guid.NewGuid().ToString("N"),retired),source);
+            Directory.CreateDirectory(Path.GetDirectoryName(backup)!);File.Copy(oldPath,backup,false);
+            PathSafetyGuard.Writable(oldPath,source);File.Delete(oldPath);
+        }
+        var legacy=PathSafetyGuard.Destination(target,"_Playlist-Folder",source);
+        if(migrated.Count>0&&Directory.Exists(legacy)&&!Directory.EnumerateFileSystemEntries(legacy).Any())Directory.Delete(legacy,false);
+        Replace(ManagedTarget.Marker, JsonFormat.Serialize(new ManagedTargetState(1, source, state.Playlists.Where(x=>!migrated.Contains(x)).Concat(playlists.Select(x => x.RelativePath)).Distinct(StringComparer.OrdinalIgnoreCase).ToList(), true, state.MetadataManaged || metadata != null)));
         void Replace(string relative, string content)
         {
             var path = PathSafetyGuard.Destination(target, relative, source);

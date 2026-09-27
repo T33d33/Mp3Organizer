@@ -76,7 +76,7 @@ public sealed class CopyPlanValidator
         {
             var path = PathSafetyGuard.Destination(target, playlist.RelativePath, source);
             var relative = playlist.RelativePath.Replace('\\', '/');
-            if ((!relative.StartsWith("_Playlists/Artists/", StringComparison.Ordinal) && !relative.StartsWith("_Playlists/Albums/", StringComparison.Ordinal)&&!relative.StartsWith("_Playlists/Folders/",StringComparison.Ordinal)&&!relative.StartsWith("_Playlist-Folder/",StringComparison.Ordinal)) || !relative.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase)) throw new IOException("Invalid playlist destination.");
+            if ((!relative.StartsWith("_Playlists/Artists/", StringComparison.Ordinal) && !relative.StartsWith("_Playlists/Albums/", StringComparison.Ordinal)&&!relative.StartsWith("_Playlists/Folders/",StringComparison.Ordinal)&&!relative.StartsWith("_Playlists/Original Playlists/",StringComparison.Ordinal)&&!relative.StartsWith("_Playlist-Folder/",StringComparison.Ordinal)) || !relative.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase)) throw new IOException("Invalid playlist destination.");
             if (!destinations.Add(path)) throw new IOException("Duplicate playlist destination.");
             if (File.Exists(path) && !owned.Contains(playlist.RelativePath)) throw new IOException("Refusing to replace an unmanaged playlist: " + path);
             if (!playlist.Content.StartsWith("#EXTM3U\n", StringComparison.Ordinal)) throw new IOException("Invalid playlist content.");

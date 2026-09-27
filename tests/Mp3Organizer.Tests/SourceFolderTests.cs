@@ -38,7 +38,7 @@ public static partial class TestRunner
         {
             Equal(1,MetadataPolicy.Migrate(reopened,workspace));var migrated=reopened.All().Single();Equal(ProcessingStatus.Discovered,migrated.Status);Equal(item.Id,migrated.Id);Equal(folder,reopened.Folders().Single());Equal(occurrence,reopened.Occurrences().Single());
             Equal(0,MetadataPolicy.Migrate(reopened,workspace));
-            using var db=new SqliteDatabase(repo.DatabasePath);Equal("3",db.Query("PRAGMA user_version")[0][0]);Equal("1",db.Query("SELECT COUNT(*) FROM metadata_policy_audit")[0][0]);True(db.Query("SELECT reason FROM processing_history").Any(x=>x[0]=="old folder inference"));
+            using var db=new SqliteDatabase(repo.DatabasePath);Equal("4",db.Query("PRAGMA user_version")[0][0]);Equal("1",db.Query("SELECT COUNT(*) FROM metadata_policy_audit")[0][0]);True(db.Query("SELECT reason FROM processing_history").Any(x=>x[0]=="old folder inference"));
             True(db.Query("SELECT previous_json FROM metadata_policy_audit")[0][0]!.Contains("Christmas"));
         }
         True(Directory.GetFiles(Path.Combine(workspace,"backups"),"*.db").Length>0);Equal(before,Snapshot(f.Source));
@@ -146,6 +146,7 @@ public static partial class TestRunner
         Equal(0,MetadataPolicy.Migrate(repo,workspace));var manual=repo.All().Single(x=>x.Id==rows[1].Id);Equal(ProcessingStatus.Ready,manual.Status);Equal("Chosen Album",manual.Effective.Album);Equal("FolderManualOverride",manual.Effective.Identification!.FieldSources["Album"]);
     }
 }
+
 
 
 

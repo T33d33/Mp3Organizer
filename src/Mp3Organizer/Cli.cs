@@ -3,6 +3,8 @@ public static class Program
 {
     public static int Main(string[] args)
     {
+        Console.InputEncoding=new System.Text.UTF8Encoding(false);
+        Console.OutputEncoding=new System.Text.UTF8Encoding(false);
         try { return Run(args); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException or OverflowException)
         { Console.Error.WriteLine("Error: " + e.Message); return 1; }

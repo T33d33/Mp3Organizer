@@ -4,14 +4,14 @@ For normal use, start with **[scan + run](RUN.md)**. The analyze examples below 
 
 See [LLM observability](OBSERVABILITY.md) for actual HTTP-attempt messages, per-batch counters and persisted cumulative statistics.
 
-This extends the existing application, caches and `music-organizer.db`. Use the **artifacts-playlist-import** build. No real music library or live recognition service was accessed during implementation.
+This extends the existing application, caches and `music-organizer.db`. Use the **artifacts-review-scope** build. No real music library or live recognition service was accessed during implementation.
 
 ## Recommended quick start
 
 Run in PowerShell, replacing credentials and the model name with values for your accounts:
 
 ```powershell
-$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-playlist-import\Mp3Organizer.dll'
+$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-review-scope\Mp3Organizer.dll'
 $source = 'E:\Mp3-Ai-test'
 $workspace = 'E:\Mp3-Ai-test-workspace'
 $reports = 'E:\Mp3-Ai-test-reports'
@@ -96,7 +96,7 @@ dotnet $dll review --workspace $workspace
 dotnet $dll review --workspace $workspace --write-tags
 ```
 
-Only `NeedsReview` rows are presented. The screen shows path, original/current metadata, duration, bitrate, candidates with evidence scores, and reasons. Enter selects candidate 1; 1–9 selects another; M enters metadata; P opens the current file in the configured system player; S marks it Skipped. EOF stops cleanly. Selection/manual changes require typing `YES` before saving. File content is rechecked before acceptance. Missing candidate values do not erase useful current fields. Meaningful artist, album, title and track number are required; Year may remain empty by manual decision.
+Only `NeedsReview` rows are presented in path order. Enter/A saves the displayed valid suggestions; M starts guided album review. Guided review asks Album artist, Album title and optional Album year once per source folder in the current session, then automatically iterates its unresolved songs, asking Title and Track number, plus Artist only for compilations (Various Artists and similar labels). The explicit album answers apply to reviewed songs in that folder; they are never inferred from its name. Disc number is neither displayed nor requested; existing stored disc metadata is retained internally. Album year is stored with each accepted song for the downstream pipeline, but asked once. /back revisits a question; /q stops with remaining files unresolved. Full folder/file path is immediately above each question. Enter at a question accepts its default. Answers persist per accepted file; shared session album defaults are not persisted separately. Source tag writes still require YES. Outside album iteration P plays, S permanently skips and Q stops. Numeric titles explicitly accepted manually remain resolved.
 
 Confirmed metadata remains in the existing SHA-keyed `manual-resolutions.json` override mechanism. Processing status, evidence, candidates and review reasons remain in `music-organizer.db`; no second review-state JSON file is introduced. Normal confirmed decisions are committed immediately and are not shown again. If interrupted between saving a confirmed JSON override and the SQLite status commit, the JSON decision survives; the entry may need reconciliation/review again. With tag writes, the write journal recovers a file replacement that completed before its DB commit.
 
@@ -120,7 +120,30 @@ After resolving, use the existing `plan`, `apply --dry-run`, `apply`, and `playl
 
 ## Verification
 
-Build with `./build-offline.ps1 -OutputDirectory artifacts-playlist-import`. Run the dependency-free test executable using `dotnet artifacts-playlist-import/Mp3Organizer.Tests.dll <scratch-folder>`. Tests mock OpenAI, AcoustID and MusicBrainz and generate synthetic WAV/MP3 data. Standard NuGet/MSBuild restore and a real provider/model inference remain unverified in this environment.
+Build with `./build-offline.ps1 -OutputDirectory artifacts-review-scope`. Run the dependency-free test executable using `dotnet artifacts-review-scope/Mp3Organizer.Tests.dll <scratch-folder>`. Tests mock OpenAI, AcoustID and MusicBrainz and generate synthetic WAV/MP3 data. Standard NuGet/MSBuild restore and a real provider/model inference remain unverified in this environment.
 
 
 
+
+
+
+
+Album-year review: Enter/A asks for an unknown album year once, using the folder path as context. A known year is not prompted in guided review. Explicit manual years are reused for matching folder + album artist (or artist) + album identities, including on subsequent review invocations. Conflicting manual years are not reused. Enter can leave a year unknown; that empty decision is remembered only for the current session. No source-folder name is used to infer a year.
+
+Review reassessment: when a matching explicit manual album year resolves the only structured blocker (UnknownYear) and required track metadata is usable, ordinary review verifies the source hash, persists the year override, clears the review reason and marks the track Ready without asking for confirmation. Other review reasons remain blocked. Explicit --write-tags review retains confirmation. Source audio remains unchanged.
+
+Guided album review always visits each unresolved song's Title and Track number, even when the album year has resolved its UnknownYear reason. Generic titles cannot be accepted by pressing Enter in the title prompt. On review startup, Ready entries with missing/generic titles are reopened as NeedsReview (explicitly confirmed numeric titles remain valid). Processed and Skipped entries are unchanged. Outside guided album review, automatic year-only completion logs the resolved title as well as the source path; a generic source filename alone does not invalidate a meaningful resolved title.
+
+F + Enter at the overview or a guided question enables auto-finish for the current album folder in this review session. It saves current defaults and shared album answers, not numbered online candidates. Missing or placeholder values pause auto-finish and require input; F can resume at a subsequent valid field. The next folder requires a fresh decision. Existing source-tag-write confirmations remain required. Auto-finish marks accepted files Ready; run performs downstream organization.
+
+Guided navigation: /back crosses into the previous guided song in the current review session, landing on its last answered question (normally Track number, or Artist for compilations). Further /back commands walk through its earlier questions. Edited defaults and the later song's unfinished draft are retained. Enter moves forward again; completing the corrected song saves its correction through the normal manual-override/status flow. Back navigation disables auto-finish. A lone / or an unknown slash command displays help rather than changing metadata. Navigation history is session-local; it does not reopen unrelated files from previous invocations.
+
+Review summary always reports Pending Review from the remaining NeedsReview database rows. Nonzero session counts for manually reviewed, automatically resolved, and skipped files are reported separately. Automatic year resolution and skipping do not count as manual review.
+
+Album-year corrections: saving a manual album year propagates it to missing-year indexed tracks matching source root, source folder, album owner and album title, including Processed tracks. Existing nonzero years and Skipped entries are preserved; conflicting explicit years prevent propagation. Manual per-file overrides use the existing JSON mechanism; no second override database is introduced. The next run also reconciles older saved manual-year decisions, so re-review/reset is unnecessary. Before ordinary copying, run verifies mapped managed target copies and saves .album-year-repair.json, then moves target files into dated album folders without re-encoding or writing tags. A collision stops repair, never overwrites. The journal supports retry after interruption; keep it until run completes. Canonical mappings and Artist/Album/Folder/imported playlists are regenerated. Empty old album folders are removed; folders containing unrelated files are retained. Source audio is never changed. Repairs currently fill missing years only, not arbitrary album/title/artist corrections.
+
+Target year repair also accepts already persisted verified MusicBrainz years: MusicBrainz field provenance, year enrichment flag, confidence >= 0.95, and a release-group ID are all required. This only reconciles an existing Processed track's established year with a missing target year; it does not infer or propagate an online year to unrelated tracks.
+
+Updated LLM failure policy: run and incremental analyze continue automatically when LLM configuration/authentication, quota, rate limiting, or other provider failures occur. After normal bounded provider retries, LLM fallback is disabled for the remainder of that invocation. AcoustID/MusicBrainz and deterministic identification continue. Ambiguous results become NeedsReview; Ready files proceed to organization. No restart, prompt, or --no-codex flag is required. A later invocation may attempt LLM again. This replaces the earlier stop/choice behavior.
+
+Standalone No is a legitimate value, not a placeholder. The NO placeholder prefix requires a metadata label such as title, artist, album or track. Case/punctuation-tolerant no title/no artist and generic Track/AudioTrack labels remain unreliable.

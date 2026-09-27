@@ -13,7 +13,7 @@ public sealed class FolderPlaylistService(ProgressRepository repository)
             var full=PathSafetyGuard.Destination(target,path,state.Source);if(File.Exists(full))lists.Add(new(path,File.ReadAllText(full)));
         }
     }
-    private static bool IsFolder(string path)=>path.Replace('\\','/').StartsWith("_Playlists/Folders/",StringComparison.OrdinalIgnoreCase)||path.Replace('\\','/').StartsWith("_Playlist-Folder/",StringComparison.OrdinalIgnoreCase);
+    private static bool IsFolder(string path)=>path.Replace('\\','/').StartsWith("_Playlists/Folders/",StringComparison.OrdinalIgnoreCase)||path.Replace('\\','/').StartsWith("_Playlists/Original Playlists/",StringComparison.OrdinalIgnoreCase)||path.Replace('\\','/').StartsWith("_Playlist-Folder/",StringComparison.OrdinalIgnoreCase);
     public void Regenerate(string source,string target,Action<string>? progress=null)
     {
         var state=ManagedTarget.Check(target,source);if(state==null)return;
@@ -54,6 +54,7 @@ public sealed class FolderPlaylistService(ProgressRepository repository)
         lists.AddRange(imports.Build(source,target,indexed,mappings,actualByPath,progress));
         PreserveExisting(target,lists);PlaylistBuilder.IncludeRetired(lists,state);
         new ManagedPlaylistWriter().Write(target,source,lists,map,tracks.ToDictionary(x=>Path.GetRelativePath(target,x.FullPath),StringComparer.OrdinalIgnoreCase));
+        repository.MarkPlaylistsGenerated(source);
         imports.WriteReport(source,target,progress);
     }
 }

@@ -1,1 +1,1 @@
-BUILD PASSED: application and test suite; warnings treated as errors.
+BUILD PASSED: .NET 10 offline compilation; warnings treated as errors. artifacts-review-scope. 249 tests passed, 0 failed. Synthetic tests only; no real audio accessed or changed.

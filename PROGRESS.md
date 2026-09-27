@@ -15,7 +15,7 @@ This extension uses the existing scanner, read-only TagLib reader, AudioMetadata
 
 Default location: `<workspace>/music-organizer.db`, separate from `<workspace>/cache.db` and authoritative `manual-resolutions.json`. Use the same workspace across commands. Workspace must be outside the source; continue keeping it outside the organized target too.
 
-See [progress-schema.sql](progress-schema.sql) for the full schema. Schema version 3 uses WAL, synchronous FULL and bound SQL parameters. Windows native SQLite is reused; no package installation is needed.
+See [progress-schema.sql](progress-schema.sql) for the full schema. Schema version 4 uses WAL, synchronous FULL and bound SQL parameters. Windows native SQLite is reused; no package installation is needed.
 
 `music_files` contains Id (GUID), SourceRoot, OriginalPath, CurrentPath, FileSize, LastWriteTimeUtc, SHA256, Artist, Album, Title, TrackNumber, Year, Bitrate, Status, LastProcessedUtc, ErrorMessage, and separate original/basic and effective metadata JSON. The JSON includes album artist, disc, duration and per-field provenance. `processing_history` appends status events and timestamps. Each file result and its history entry commit together.
 
@@ -65,7 +65,7 @@ Backups are named `backups/music-organizer-<UTC timestamp>-<unique suffix>.db` u
 ## PowerShell examples — not executed against your library
 
 ```powershell
-$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-playlist-import\Mp3Organizer.dll'
+$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-review-scope\Mp3Organizer.dll'
 $workspace = 'E:\Mp3-Ai-test-workspace'
 
 dotnet $dll scan 'E:\Mp3-Ai-test' --workspace $workspace
@@ -87,9 +87,11 @@ The reset-file/folder examples use placeholder paths; substitute actual indexed 
 
 ## Verification
 
-The complete offline .NET 10 application and test suite compile with warnings treated as errors. 213 tests pass, including unchanged-scan read avoidance, limits, processed-file exclusion, persistence across a separate process, interruption after commit, scoped resets, forced rescan, SHA relocation/duplicates, backup-before-confirmation, backup failure, existing-workflow integration and source immutability. Tests use temporary SQLite databases, synthetic WAV fixtures and mocked identification. No real music library was scanned.
+The complete offline .NET 10 application and test suite compile with warnings treated as errors. 222 tests pass, including unchanged-scan read avoidance, limits, processed-file exclusion, persistence across a separate process, interruption after commit, scoped resets, forced rescan, SHA relocation/duplicates, backup-before-confirmation, backup failure, existing-workflow integration and source immutability. Tests use temporary SQLite databases, synthetic WAV fixtures and mocked identification. No real music library was scanned.
 
-Standard NuGet/MSBuild restore remains unverified due to the existing environment restriction. Rebuild this output with `./build-offline.ps1 -OutputDirectory artifacts-playlist-import`; run `dotnet artifacts-playlist-import/Mp3Organizer.Tests.dll <scratch-directory>`.
+Standard NuGet/MSBuild restore remains unverified due to the existing environment restriction. Rebuild this output with `./build-offline.ps1 -OutputDirectory artifacts-review-scope`; run `dotnet artifacts-review-scope/Mp3Organizer.Tests.dll <scratch-directory>`.
+
+
 
 
 

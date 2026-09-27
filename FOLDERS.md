@@ -1,6 +1,6 @@
 # Folder playlists and metadata policy migration
 
-Use `artifacts-playlist-import/Mp3Organizer.dll`. The normal workflow remains:
+Use `artifacts-review-scope/Mp3Organizer.dll`. The normal workflow remains:
 
 ```powershell
 dotnet $dll scan 'E:\Mp3-Ai-test' --workspace 'E:\Mp3-Ai-test-workspace'
@@ -101,4 +101,6 @@ All three Christmas entries and the Party entry contain:
 ```
 
 The full test suite covers all ten requested scenarios, plus unsafe order fallback, ID preservation through reset/restart, missing playlist recovery, legacy plan rejection, suppression of old automatically written tags and preservation of explicit folder overrides. Tests use synthetic audio and mocked services only. Build and test output is saved alongside this documentation.
+
+
 

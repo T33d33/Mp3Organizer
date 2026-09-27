@@ -45,7 +45,12 @@ public static class ProgressCommands
         if(command=="review")
         {
             if(Console.IsInputRedirected)throw new IOException("review requires an interactive terminal.");
-            Console.WriteLine("Reviewed: "+new ReviewService(repository,workspace,new ReviewConsole(),tags:writeTags?tagWriter:null).Run());return 0;
+            var review=new CandidateReviewService(repository,workspace,new ReviewConsole(),tags:writeTags?tagWriter:null,albumFirst:true);
+            review.Run();
+            if(review.ManuallyReviewedCount>0)Console.WriteLine("Manually reviewed this session: "+review.ManuallyReviewedCount);
+            if(review.AutomaticallyResolvedCount>0)Console.WriteLine("Automatically resolved this session: "+review.AutomaticallyResolvedCount);
+            if(review.SkippedCount>0)Console.WriteLine("Skipped this session: "+review.SkippedCount);
+            Console.WriteLine("Pending Review: "+repository.All().Count(x=>x.Status==ProcessingStatus.NeedsReview));return 0;
         }
         if(command=="scan")
         {
@@ -57,8 +62,7 @@ public static class ProgressCommands
         {
             PrintStatus(repository.All());
             Console.WriteLine($"Source folders: {repository.Folders().Count}\nSource occurrences: {repository.Occurrences().Count(x=>x.Present)}");
-            var playlists=repository.SourcePlaylists().Where(x=>x.Present).ToList();
-            Console.WriteLine($"Source playlists: {playlists.Count}\nPlaylist read errors: {playlists.Count(x=>x.Error!="")}");
+            repository.PrintPlaylistStatus(Console.WriteLine);
             Console.WriteLine("Cumulative LLM activity (since observability was enabled):");repository.LlmTotals().Print(Console.WriteLine);return 0;
         }
         if(command.StartsWith("reset-",StringComparison.Ordinal))
@@ -93,9 +97,9 @@ public static class ProgressCommands
             }
             bool ContinueWithoutCodex(CodexServiceException error)
             {
-                Console.WriteLine("\n[1] Continue without Codex (ambiguous files need manual review for the rest of this run)\n[2] Stop now and resume later (current file remains pending)");
-                if(Console.IsInputRedirected){Console.WriteLine("Non-interactive input: stopping safely; resume in a terminal.");return false;}
-                while(true){Console.Write("Select 1 or 2: ");var value=Console.ReadLine();if(value=="1"){observer.DisableForRun();return true;}if(value=="2"||value==null)return false;}
+                Console.WriteLine("LLM unavailable: "+error.Kind+" — "+error.Message);
+                Console.WriteLine("Continuing automatically without LLM; unresolved tracks will remain NeedsReview.");
+                observer.DisableForRun();return true;
             }
             var analyzer=new IncrementalProgressService(repository,tagWriter:writeTags?tagWriter:null,codexState:codexState,continueWithoutCodex:ContinueWithoutCodex);
             var count=analyzer.AnalyzeAsync(limit,Resolver,progress.Write).GetAwaiter().GetResult();

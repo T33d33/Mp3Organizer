@@ -1,6 +1,6 @@
 # LLM diagnostics and counters
 
-Use `artifacts-playlist-import/Mp3Organizer.dll`. Command syntax and identification decisions are unchanged.
+Use `artifacts-review-scope/Mp3Organizer.dll`. Command syntax and identification decisions are unchanged.
 
 Incremental `analyze --limit N` now prints:
 
@@ -41,5 +41,7 @@ These are activity counts, not mutually interchangeable totals: requests count H
 Even `reset-all` clears processing state while retaining this diagnostic activity history; its database backup includes both. Deleting/replacing the workspace database loses the history. A forced termination between a recorded dispatch and its network send may leave an attempted-request event without a corresponding server request; no local telemetry can guarantee remote delivery.
 
 No review-state gates, confidence thresholds, lookup ordering, caching behavior, tag writes, plan/apply behavior or retry policy were changed by this update. Full-source modes remain deterministic; the new batch counters apply to incremental `analyze --limit`.
+
+
 
 

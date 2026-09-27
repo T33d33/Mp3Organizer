@@ -79,6 +79,20 @@ public static partial class TestRunner
             True(repo.All().Where(x=>x.Status==ProcessingStatus.NeedsReview).All(x=>x.Effective.Identification!.RecognitionMethod=="DeterministicWithoutCodexFallback"&&x.Effective.Identification.CodexUnavailable));
         }
     }
+    static void CodexUnavailableContinuesAllFailureKinds()
+    {
+        foreach(var kind in Enum.GetValues<CodexFailureKind>())
+        {
+            var f=ProgressFixture(3);var workspace=ProgressWorkspace(f);using var repo=new ProgressRepository(workspace);new IncrementalProgressService(repo).Scan(f.Source);
+            var rows=repo.All();repo.Save(MakeReady(rows[0]),"already ready");
+            var client=new FakeCodex{Failure=new(kind,"unavailable")};var state=new CodexRunState();var notices=0;
+            var analyzer=new IncrementalProgressService(repo,codexState:state,continueWithoutCodex:_=>{notices++;return true;});
+            Equal(2,analyzer.AnalyzeAsync(10,_=>new CodexMetadataResolver(new FixedResolver(AmbiguousRow()),client,state)).GetAwaiter().GetResult());
+            True(!analyzer.StoppedForCodex);Equal(1,client.Calls);Equal(1,notices);Equal(2,repo.All().Count(x=>x.Status==ProcessingStatus.NeedsReview));
+            var pipeline=new RunPipelineService(repo,workspace);Equal(1,pipeline.ApplyReady(pipeline.Targets(f.Target),f.Reports));
+            Equal(1,repo.All().Count(x=>x.Status==ProcessingStatus.Processed));
+        }
+    }
     static void CodexFailureClassificationAndRetries()
     {
         Equal(CodexFailureKind.Quota,CodexClient.Classify(HttpStatusCode.TooManyRequests,"{\"error\":{\"code\":\"insufficient_quota\"}}").Kind);
@@ -133,7 +147,7 @@ public static partial class TestRunner
     static void CodexResumeSucceedsWithoutReset()
     {
         var f=ProgressFixture(2);using var repo=new ProgressRepository(ProgressWorkspace(f));new IncrementalProgressService(repo,p=>new TagLibMetadataReader(new ReadOnlySource()).Read(p) with{Artist="Test Performer",AlbumArtist="Test Performer",Title="Song",Album="Test Record",Year=0}).Scan(f.Source);var client=new FakeCodex{Failure=new(CodexFailureKind.AuthenticationConfiguration,"Configure key")};var state=new CodexRunState();
-        var analyzer=new IncrementalProgressService(repo,codexState:state,continueWithoutCodex:_=>throw new Exception("Configuration failures must not prompt/retry"));
+        var analyzer=new IncrementalProgressService(repo,codexState:state,continueWithoutCodex:_=>false);
         analyzer.AnalyzeAsync(10,_=>new CodexMetadataResolver(new FixedResolver(AmbiguousRow()),client,state)).GetAwaiter().GetResult();True(analyzer.StoppedForCodex);Equal(1,client.Calls);
         client.Failure=null;state=new();analyzer=new(repo,codexState:state);Equal(2,analyzer.AnalyzeAsync(10,_=>new CodexMetadataResolver(new FixedResolver(AmbiguousRow()),client,state)).GetAwaiter().GetResult());True(repo.All().All(x=>x.Status==ProcessingStatus.Ready));Equal(3,client.Calls);
         Equal(0,analyzer.AnalyzeAsync(10,_=>throw new Exception("Completed files must not repeat")).GetAwaiter().GetResult());

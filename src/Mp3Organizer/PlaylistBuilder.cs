@@ -78,7 +78,9 @@ public sealed class PlaylistBuilder
         {
             var first = group.First().Metadata;
             var artist = Artist(group.Key.Owner, AlbumGrouper.Owner(first));
-            if (!artist.Albums.TryGetValue(group.Key.Album, out var album))
+            if (!artist.Albums.TryGetValue(group.Key.Album, out var album)
+                && !(first.Year>0&&tracks.Where(x=>MetadataNormalizer.Key(AlbumGrouper.Owner(x.Metadata))==group.Key.Owner&&MetadataNormalizer.Key(x.Metadata.Album)==MetadataNormalizer.Key(first.Album)).Select(x=>x.Metadata.Year).Distinct().Count()==1
+                    &&artist.Albums.TryGetValue(MetadataNormalizer.Key(first.Album)+"|0",out album)))
             {
                 // Fixed two-digit album IDs make concatenated spoken codes unambiguous.
                 if (artist.NextAlbumId > 99) throw new IOException($"Artist {artist.DisplayName} has exhausted the 99 permanent album codes.");

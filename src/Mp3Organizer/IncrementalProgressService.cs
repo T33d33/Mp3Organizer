@@ -95,7 +95,7 @@ public sealed class IncrementalProgressService(ProgressRepository repository,Fun
                 var waiting=item with{Effective=e.Metadata,Status=ProcessingStatus.Analyzed,ErrorMessage="Waiting for Codex: "+e.Message};
                 repository.Save(waiting,"Codex pending; deterministic candidates preserved");
                 progress?.Invoke("Progress saved. Codex "+e.Failure.Kind+": "+e.Message);
-                if(e.Failure.Kind is CodexFailureKind.AuthenticationConfiguration or CodexFailureKind.InvalidRequest||codexState==null||continueWithoutCodex?.Invoke(e.Failure)!=true)
+                if(codexState==null||continueWithoutCodex?.Invoke(e.Failure)!=true)
                 {StoppedForCodex=true;break;}
                 codexState.Unavailable=e.Failure;
                 completed=waiting with{Effective=CodexRunState.Fallback(e.Metadata,e.Failure),Status=ProcessingStatus.NeedsReview,LastProcessedUtc=DateTime.UtcNow.ToString("O"),ErrorMessage=""};

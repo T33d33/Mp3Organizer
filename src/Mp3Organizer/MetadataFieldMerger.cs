@@ -34,7 +34,7 @@ public static class MetadataFieldMerger
         {
             if(pair.Value==null)continue;var v=pair.Value;
             object?[] values=[v.Artist,v.AlbumArtist,v.Album,v.Title,v.TrackNumber,v.DiscNumber,v.Year];
-            for(var i=0;i<Fields.Length;i++)if(values[i]!=null)result[Fields[i]]=pair.Source;
+            for(var i=0;i<Fields.Length;i++)if(values[i]!=null)result[Fields[i]]=Fields[i]=="Year"&&v.YearTrackOnly?"FileManualTrackYear":pair.Source;
         }
         return result;
     }

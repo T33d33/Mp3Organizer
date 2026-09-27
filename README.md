@@ -15,7 +15,7 @@
 Use the latest build directly with `dotnet`, rather than an older `.cmd` launcher. Start each PowerShell session with:
 
 ```powershell
-$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-playlist-import\Mp3Organizer.dll'
+$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-review-scope\Mp3Organizer.dll'
 $source = 'E:\Mp3-Ai-test'
 $target = 'E:\Mp3-Ai-test-organized'
 $workspace = 'E:\Mp3-Ai-test-workspace'
@@ -90,11 +90,11 @@ The tests use a dependency-free executable test runner with assertions and nonze
 This environment denied access to the user-level NuGet configuration and rejected an escalation request. Both projects were therefore compiled with the installed .NET 10 Roslyn compiler and reference assemblies, using the already installed TagLibSharp package, without accessing that configuration or downloading dependencies:
 
 ```powershell
-.\build-offline.ps1 -OutputDirectory artifacts-playlist-import
-dotnet artifacts-playlist-import/Mp3Organizer.Tests.dll "path/to/test-scratch"
+.\build-offline.ps1 -OutputDirectory artifacts-review-scope
+dotnet artifacts-review-scope/Mp3Organizer.Tests.dll "path/to/test-scratch"
 ```
 
-The offline script accepts `-TagLibDll` for a different installed TagLibSharp 2.3.0 DLL path. It treats warnings as errors. The current prebuilt application and tests are in `artifacts-playlist-import`. Standard NuGet/MSBuild restore remains unverified in this restricted environment.
+The offline script accepts `-TagLibDll` for a different installed TagLibSharp 2.3.0 DLL path. It treats warnings as errors. The current prebuilt application and tests are in `artifacts-review-scope`. Standard NuGet/MSBuild restore remains unverified in this restricted environment.
 
 ## Safety and execution
 
@@ -168,5 +168,7 @@ Plan report directories also contain a preview `playlist-index.csv`. Their `albu
 Each analysis/plan has its own report directory. Planning produces `library.csv`, `missing-tags.csv`, `duplicates.csv`, `conflicts.csv`, `albums.csv`, `copy-plan.csv`, `copy-plan.json`, and its SHA-256 checksum. Analysis produces the applicable inventory reports without a copy plan. CSV uses UTF-8, quoted fields, invariant numeric formatting, and spreadsheet formula neutralization.
 
 Summary album counts use normalized album owner/title/year. Loose tracks mean missing album tags. Unreadable files are counted in total files and errors but not misclassified as confirmed missing tags. `conflicts.csv` distinguishes blocking issues from resolved filename collisions. Exact destination paths appear in `copy-plan.csv`.
+
+
 
 

@@ -1,5 +1,5 @@
--- Persistent progress, source folders and imported playlists, schema version 3
-PRAGMA user_version=3;
+-- Persistent progress, source folders and source playlists, schema version 4
+PRAGMA user_version=4;
 CREATE TABLE IF NOT EXISTS music_files (id TEXT PRIMARY KEY, source_root TEXT NOT NULL, original_path TEXT NOT NULL, current_path TEXT NOT NULL COLLATE NOCASE UNIQUE, file_size INTEGER NOT NULL, last_write_time_utc TEXT NOT NULL, sha256 TEXT NOT NULL, artist TEXT NOT NULL, album TEXT NOT NULL, title TEXT NOT NULL, track_number INTEGER NOT NULL, year INTEGER NOT NULL, bitrate INTEGER NOT NULL, status TEXT NOT NULL, last_processed_utc TEXT, error_message TEXT NOT NULL, basic_json TEXT NOT NULL, effective_json TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS processing_history (sequence INTEGER PRIMARY KEY AUTOINCREMENT, file_id TEXT NOT NULL, event_utc TEXT NOT NULL, status TEXT NOT NULL, reason TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS llm_events (sequence INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL, event_utc TEXT NOT NULL, kind TEXT NOT NULL, source_path TEXT NOT NULL, detail TEXT NOT NULL);
@@ -12,5 +12,5 @@ CREATE TABLE IF NOT EXISTS source_occurrences (id TEXT PRIMARY KEY,folder_id INT
 CREATE TABLE IF NOT EXISTS folder_order (folder_id INTEGER NOT NULL,position INTEGER NOT NULL,occurrence_id TEXT NOT NULL,PRIMARY KEY(folder_id,position));
 CREATE TABLE IF NOT EXISTS canonical_mappings (file_id TEXT NOT NULL,target TEXT NOT NULL COLLATE NOCASE,relative_path TEXT NOT NULL,source_hash TEXT NOT NULL,target_hash TEXT NOT NULL,size INTEGER NOT NULL,PRIMARY KEY(file_id,target));
 CREATE TABLE IF NOT EXISTS metadata_policy_audit (file_id TEXT NOT NULL,policy INTEGER NOT NULL,decision TEXT NOT NULL,previous_json TEXT NOT NULL,event_utc TEXT NOT NULL,PRIMARY KEY(file_id,policy));
-CREATE TABLE IF NOT EXISTS source_playlists (id INTEGER PRIMARY KEY AUTOINCREMENT,source_root TEXT NOT NULL COLLATE NOCASE,path TEXT NOT NULL COLLATE NOCASE,name TEXT NOT NULL,present INTEGER NOT NULL,error TEXT NOT NULL,UNIQUE(source_root,path));
-CREATE TABLE IF NOT EXISTS source_playlist_entries (playlist_id INTEGER NOT NULL,position INTEGER NOT NULL,original_entry TEXT NOT NULL,file_id TEXT NOT NULL,problem TEXT NOT NULL,result TEXT NOT NULL,target_path TEXT NOT NULL,PRIMARY KEY(playlist_id,position));
+CREATE TABLE IF NOT EXISTS source_playlists (id INTEGER PRIMARY KEY AUTOINCREMENT,source_root TEXT NOT NULL COLLATE NOCASE,path TEXT NOT NULL COLLATE NOCASE,name TEXT NOT NULL,present INTEGER NOT NULL,error TEXT NOT NULL,original_path TEXT NOT NULL DEFAULT '',sha256 TEXT NOT NULL DEFAULT '',header_json TEXT NOT NULL DEFAULT '[]',warnings_json TEXT NOT NULL DEFAULT '[]',last_generated_utc TEXT NOT NULL DEFAULT '',UNIQUE(source_root,path));
+CREATE TABLE IF NOT EXISTS source_playlist_entries (playlist_id INTEGER NOT NULL,position INTEGER NOT NULL,original_entry TEXT NOT NULL,file_id TEXT NOT NULL,problem TEXT NOT NULL,result TEXT NOT NULL,target_path TEXT NOT NULL,metadata_json TEXT NOT NULL DEFAULT '[]',category TEXT NOT NULL DEFAULT 'Pending/error',PRIMARY KEY(playlist_id,position));

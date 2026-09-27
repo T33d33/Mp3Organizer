@@ -33,9 +33,9 @@ public sealed class PlaylistIndexBuilder
             var name=Path.GetFileNameWithoutExtension(path);var match=System.Text.RegularExpressions.Regex.Match(name,@"^\[(FOLDER-\d+)\] (.+)$");
             if(match.Success)result.Add(new(match.Groups[1].Value,"Folder","", "",path));
         }
-        foreach(var path in paths.Where(x=>x.StartsWith("_Playlist-Folder\\",StringComparison.OrdinalIgnoreCase)).OrderBy(x=>x,NaturalPathComparer.Instance))
+        foreach(var path in paths.Where(x=>(x.StartsWith("_Playlist-Folder\\",StringComparison.OrdinalIgnoreCase)||x.StartsWith("_Playlists\\Original Playlists\\",StringComparison.OrdinalIgnoreCase))).OrderBy(x=>x,NaturalPathComparer.Instance))
         {
-            var match=System.Text.RegularExpressions.Regex.Match(Path.GetFileNameWithoutExtension(path),@"^Code (Playlist \d+) - ");
+            var match=System.Text.RegularExpressions.Regex.Match(Path.GetFileNameWithoutExtension(path),@"^\[(PL-\d+)\] ");
             if(match.Success)result.Add(new(match.Groups[1].Value,"ImportedPlaylist","","",path));
         }
         return result;

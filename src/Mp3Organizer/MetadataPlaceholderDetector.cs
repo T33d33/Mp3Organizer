@@ -7,7 +7,7 @@ public static class MetadataPlaceholderDetector
 {
     private static string Compact(string value) => Regex.Replace(MetadataNormalizer.Key(value), @"[^\p{L}\p{Nd}]", "");
     public static bool IsPlaceholder(string value) => Regex.IsMatch(Compact(value),
-        @"^(?:(?:NO|UNKNOWN|UNNAMED|UNTITLED)(?:ARTIST|ALBUMARTIST|ALBUM|TITLE|TRACK|AUDIO|AUDIOTRACK)?|ARTIST|ALBUMARTIST|ALBUM|TITLE|NA|VARIOUS)\p{Nd}*$");
+        @"^(?:NO(?:ARTIST|ALBUMARTIST|ALBUM|TITLE|TRACK|AUDIO|AUDIOTRACK)|(?:UNKNOWN|UNNAMED|UNTITLED)(?:ARTIST|ALBUMARTIST|ALBUM|TITLE|TRACK|AUDIO|AUDIOTRACK)?|ARTIST|ALBUMARTIST|ALBUM|TITLE|NA|VARIOUS)\p{Nd}*$");
     public static bool IsGenericTitle(string value)
     {
         var stem = AudioFileScanner.Extensions.Contains(Path.GetExtension(value)) ? Path.GetFileNameWithoutExtension(value) : value;
