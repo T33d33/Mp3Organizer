@@ -11,10 +11,14 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
     public int SkippedCount {get;private set;}
     public int Run()
     {
+        string? finishFolder=null;
         var queue=repository.All().Where(x=>x.Status==ProcessingStatus.NeedsReview).OrderBy(x=>x.CurrentPath,NaturalPathComparer.Instance).ToList();
         for(var position=0;position<queue.Count;position++)
         {
             var item=repository.All().Single(x=>x.Id==queue[position].Id);
+            var currentFolder=Path.GetDirectoryName(item.CurrentPath)!;
+            if(!string.Equals(finishFolder,currentFolder,StringComparison.OrdinalIgnoreCase))finishFolder=null;
+            var folderLabel=Path.GetRelativePath(item.SourceRoot,currentFolder);
             if(albumFirst&&!new AlbumSetupService(repository,workspace,console).Ensure(item))return ManuallyReviewedCount;
             item=repository.All().Single(x=>x.Id==item.Id);
             var row=item.Effective;var candidates=(row.Identification?.Candidates??[]).Take(9).ToList();
@@ -32,9 +36,15 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
                 console.Write("Album context:\nAlbum Artist: "+row.AlbumArtist+"\nAlbum: "+row.Album+"\nYear: "+row.Year+"\nTrack metadata:\nArtist: "+row.Artist+"\nTitle: "+row.Title+"\nTrack: "+row.Track);
                 for(var i=0;i<candidates.Count;i++)console.Write($"\n[{i+1}] Candidate\n{Display(candidates[i].Metadata)}");
                 console.Write((recommended>0?$"Recommended candidate: {recommended} (highest evidence score; not verified)\n[Enter] Save recommended candidate and continue | [1-{candidates.Count}] Select candidate":"No online candidates. [Enter] Save current metadata and continue")+"\n[M] Manual editing | [P] Play | [D] Defer | [/q] Stop");
-                Prompt(item.CurrentPath,"Action [Enter = save and next; M = edit fields] | [P] Play | [D] Defer | [/back] Previous file | [/q] Stop:");var command=console.Read()?.Trim();if(command==null||command.Equals("/q",StringComparison.OrdinalIgnoreCase)||command.Equals("q",StringComparison.OrdinalIgnoreCase))return ManuallyReviewedCount;
+                console.Write($"[F] Finish ({folderLabel}) — accept as Enter for this folder only.");
+                Prompt(item.CurrentPath,"Action [Enter = save and next; M = edit fields] | [P] Play | [D] Defer | [/back] Previous file | [/q] Stop:");var command=finishFolder!=null?"":console.Read()?.Trim();if(command==null||command.Equals("/q",StringComparison.OrdinalIgnoreCase)||command.Equals("q",StringComparison.OrdinalIgnoreCase))return ManuallyReviewedCount;
+                if(command.Equals("F",StringComparison.OrdinalIgnoreCase))
+                {
+                    finishFolder=currentFolder;console.Write($"Finishing ({folderLabel}) using Enter decisions.");command="";
+                }
                 if(command.Equals("/back",StringComparison.OrdinalIgnoreCase))
                 {
+                    finishFolder=null;
                     if(position==0){console.Write("This is the first file in this review session.");continue;}
                     position-=2;break;
                 }
@@ -52,7 +62,7 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
                 else
                 {
                     if(command=="")command=recommended.ToString();
-                    if(!int.TryParse(command,out var number)||number<0||number>candidates.Count||number==0&&candidates.Count>0){console.Write("This is an action menu, not a metadata field. Press Enter to save, or M to edit Artist/Title. Other actions: candidate number, P, D, /q.");continue;}
+                    if(!int.TryParse(command,out var number)||number<0||number>candidates.Count||number==0&&candidates.Count>0){console.Write("This is an action menu, not a metadata field. Press Enter to save, or M to edit Artist/Title. Other actions: candidate number, F, P, D, /q.");continue;}
                     if(number==0)selected=TagMetadata.From(row);
                     else
                     {
@@ -67,6 +77,7 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
                 var albumDecision=false;
                 if(manual||tags!=null)
                 {
+                finishFolder=null;
                 console.Write("Proposed result:\n"+Display(selected)+"\nScope: this track only. Artist, Title and Track number never propagate. Album/Album Artist are stored for this track; Year is not an album-wide decision here.\n"+(tags!=null?"YES also authorizes source MP3 tag writing; audio is unchanged.\n":"")+"Enter / YES = save this track | /cancel = selection (keep draft) | ALBUM = save and apply this Year to matching missing-year tracks in this source folder (same artist/album identity only) | unknown input = return to selection (keep draft)");
                 Prompt(item.CurrentPath,"Confirm:");var confirm=console.Read()?.Trim();if(confirm==null||confirm.Equals("/q",StringComparison.OrdinalIgnoreCase))return ManuallyReviewedCount;albumDecision=confirm.Equals("ALBUM",StringComparison.OrdinalIgnoreCase);if(confirm!=""&&!confirm.Equals("YES",StringComparison.OrdinalIgnoreCase)&&!albumDecision)continue;
                 if(tags!=null&&confirm==""){console.Write("Source tag writing requires YES. Draft retained; no changes saved.");continue;}

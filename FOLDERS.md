@@ -1,6 +1,6 @@
 # Folder playlists and metadata policy migration
 
-Use `artifacts-review-scope/Mp3Organizer.dll`. The normal workflow remains:
+Use `artifacts-finish-folder/Mp3Organizer.dll`. The normal workflow remains:
 
 ```powershell
 dotnet $dll scan 'E:\Mp3-Ai-test' --workspace 'E:\Mp3-Ai-test-workspace'

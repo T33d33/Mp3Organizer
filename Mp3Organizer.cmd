@@ -1,5 +1,5 @@
 @echo off
-dotnet "%~dp0artifacts-review-scope\Mp3Organizer.dll" %*
+dotnet "%~dp0artifacts-finish-folder\Mp3Organizer.dll" %*
 exit /b %errorlevel%
 
 
