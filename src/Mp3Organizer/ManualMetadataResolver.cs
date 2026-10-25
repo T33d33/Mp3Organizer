@@ -15,14 +15,25 @@ public sealed class ManualMetadataResolver(IMetadataResolver inner,ManualResolut
         }
         var current=Revision(store.FilePath);if(current!=revision){data=store.Load();revision=current;}
         var folder=FindFolder(data,Path.GetDirectoryName(file.FullPath)!,neighbors,inventory).Value;
-        if(data.Folders.Values.Any(x=>x.ReviewFileIds!=null))
+        string? id=null;
+        if(data.Folders.Values.Any(x=>x.ReviewFileIds!=null)||data.Files.Values.Any(x=>x.CandidateReviewFileIds!=null))
         {
             using var progress=new ProgressRepository(Path.GetDirectoryName(store.FilePath)!);
-            var id=progress.All().FirstOrDefault(x=>x.CurrentPath.Equals(file.FullPath,StringComparison.OrdinalIgnoreCase))?.Id;
+            id=progress.All().FirstOrDefault(x=>x.CurrentPath.Equals(file.FullPath,StringComparison.OrdinalIgnoreCase))?.Id;
             var scope=data.Folders.Values.FirstOrDefault(x=>id!=null&&x.ReviewFileIds?.Contains(id)==true);
             if(scope!=null)folder=scope;else if(folder?.ReviewFileIds!=null)folder=null;
         }
         var specific=data.Files.FirstOrDefault(x=>x.Key.Equals("sha256:"+file.Sha256,StringComparison.OrdinalIgnoreCase)).Value;
+        if(specific?.CandidateReviewFileIds!=null)
+        {
+            if(id!=null&&specific.CandidateReviewFileIds.Contains(id))
+            {
+                folder=null;
+                if(specific.AcceptedCandidateMetadata?.TryGetValue(id,out var accepted)==true)
+                    specific=specific with{Artist=accepted.Artist,Title=accepted.Title,TrackNumber=accepted.Track,Album=accepted.Album,AlbumArtist=accepted.AlbumArtist,Year=accepted.Year};
+            }
+            else specific=specific with{Album=null,AlbumArtist=null,Year=null};
+        }
         if(folder?.AlbumSetupConfirmed==true&&folder.ReviewFileIds==null)folder=folder with{Album=MetadataQualityEvaluator.Invalid(file.Album)?folder.Album:null,AlbumArtist=MetadataQualityEvaluator.Invalid(file.AlbumArtist)?folder.AlbumArtist:null,Year=file.Year==0?folder.Year:null};
         if(folder?.ReviewFileIds!=null&&specific!=null)specific=specific with{Album=folder.Album,AlbumArtist=folder.AlbumArtist,Year=folder.Year};
         var merged=Apply(Apply(file,folder),specific);

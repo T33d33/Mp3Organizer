@@ -37,7 +37,8 @@ public sealed class ManualResolutionStore
         if(data.SchemaVersion!=1)throw new IOException("manual-resolutions.json: schemaVersion must be 1.");
         if(data.Folders==null||data.Files==null)throw new IOException("manual-resolutions.json: folders and files must be objects.");
         Check(data.Folders,"folders",@"^folder:[A-Za-z0-9_-]{1,128}$");Check(data.Files,"files",@"^sha256:[a-fA-F0-9]{64}$");
-        if(data.Folders.Values.GroupBy(x=>PathSafetyGuard.Canonical(x.LastKnownPath),StringComparer.OrdinalIgnoreCase).Any(x=>x.Count()>1))throw new IOException("manual-resolutions.json: multiple folder overrides share a lastKnownPath.");
+        foreach(var group in data.Folders.Values.GroupBy(x=>PathSafetyGuard.Canonical(x.LastKnownPath),StringComparer.OrdinalIgnoreCase).Where(x=>x.Count()>1))
+            if(group.Any(x=>x.ReviewFileIds==null)||group.SelectMany(x=>x.ReviewFileIds!).GroupBy(x=>x).Any(x=>x.Count()>1))throw new IOException("manual-resolutions.json: multiple folder overrides share a lastKnownPath with ambiguous membership.");
         static void Check(SortedDictionary<string,ManualOverride> entries,string section,string pattern)
         {
             var keys=new HashSet<string>(StringComparer.OrdinalIgnoreCase);

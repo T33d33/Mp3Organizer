@@ -5,6 +5,8 @@ namespace Mp3Organizer;
 public sealed record ManualOverride
 {
     public string[]? ReviewFileIds {get;init;}
+    public string[]? CandidateReviewFileIds {get;init;}
+    public Dictionary<string,TagMetadata>? AcceptedCandidateMetadata {get;init;}
     public bool AlbumSetupConfirmed {get;init;}
     public bool ProvisionalAlbumArtist {get;init;}
     public bool ConfirmedLooseTrack {get;init;}

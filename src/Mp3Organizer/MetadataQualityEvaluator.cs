@@ -22,21 +22,35 @@ public sealed class MetadataQualityEvaluator
 }
 public sealed class FilenameMetadataFallback
 {
+    private static string Normalize(string text) => Regex.Replace(text.Replace('_', ' '), @"\s+", " ").Trim();
+    private static string[] SplitNames(string text)
+    {
+        if (text.Contains(" - ")) return text.Split(" - ", 2, StringSplitOptions.TrimEntries);
+        if (text.Count(c => c == '-') == 1) return text.Split('-', 2, StringSplitOptions.TrimEntries);
+        return [text];
+    }
     public static string Clean(string text) => Regex.Replace(Regex.Replace(text, @"(?i)[\s_\-]*(?:upped\s*by|uploaded\s*by|ripped\s*by).*", ""), @"(?i)[\[\(]?\b\d{2,4}\s*(?:kbps|kbit/s)\b[\]\)]?", "").Trim(' ', '-', '_');
     public AudioMetadata Resolve(AudioMetadata file)
     {
+        var stem=Path.GetFileNameWithoutExtension(file.FileName).Trim(' ', '_');
+        // One underscore separates artist/title; multiple underscores represent spaces.
+        var normalizedStemInput=stem.Count(c=>c=='_')==1 && !stem.Contains('-')
+            ? stem.Replace("_", " - ") : stem;
+        var normalizedName=Normalize(normalizedStemInput)+Path.GetExtension(file.FileName);
+        var normalizedStem=Path.GetFileNameWithoutExtension(normalizedName);
         var artist = MetadataQualityEvaluator.Invalid(file.Artist) ? "" : file.Artist;
         var album = MetadataQualityEvaluator.Invalid(file.Album) ? "" : file.Album;
         var title = file.Title; var track = file.Track;
-        var filenameHint=FilenameTrackParser.Parse(file.FileName);
+        var filenameHint=FilenameTrackParser.Parse(normalizedName);
         if(track==0&&filenameHint!=null)track=filenameHint.Number;
-        if (MetadataQualityEvaluator.Invalid(title) || MetadataQualityEvaluator.FilenameTitle(file))
+        var filenameLike=artist==""&&SplitNames(normalizedStem).Length==2&&MetadataNormalizer.Key(Normalize(title))==MetadataNormalizer.Key(Normalize(stem));
+        if (MetadataQualityEvaluator.Invalid(title) || MetadataQualityEvaluator.FilenameTitle(file) || filenameLike)
         {
-            title = filenameHint?.Title ?? Clean(Path.GetFileNameWithoutExtension(file.FileName));
+            title = filenameHint?.Title ?? Clean(normalizedStem);
             var match = Regex.Match(title, @"^(\d{1,3})[ ._-]+(.+)$");
             if (filenameHint==null && match.Success) { if (track == 0) uint.TryParse(match.Groups[1].Value,out track); title = match.Groups[2].Value; }
-            var names = title.Split(" - ", 2, StringSplitOptions.TrimEntries);
-            if (names.Length == 2 && artist == "") { artist = names[0]; title = names[1]; }
+            var names = SplitNames(title);
+            if (names.Length == 2 && artist == ""&&!MetadataQualityEvaluator.Invalid(names[0])&&!MetadataQualityEvaluator.Invalid(names[1])) { artist = names[0]; title = names[1]; }
         }
         if (MetadataQualityEvaluator.Invalid(artist)) artist = "";
         if (MetadataQualityEvaluator.Invalid(album)) album = "";

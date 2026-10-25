@@ -2,6 +2,25 @@ using Mp3Organizer;
 namespace Mp3Organizer.Tests;
 public static partial class TestRunner
 {
+    static void AlbumCorrectionMergesNamesWithoutOverwrite()
+    {
+        var f=Fixture();var second=Path.Combine(f.Source,"second.wav");File.Copy(f.File,second);File.AppendAllText(second,"different audio file");
+        using(var tags=TagLib.File.Create(f.File)){tags.Tag.Album="First Album";tags.Save();}
+        using(var tags=TagLib.File.Create(second)){tags.Tag.Album="Second Album";tags.Save();}
+        var before=Snapshot(f.Source);var ws=ProgressWorkspace(f);using var repo=new ProgressRepository(ws);new IncrementalProgressService(repo).Scan(f.Source);
+        foreach(var row in repo.All())repo.Save(MakeReady(row),"ready");
+        var run=new RunPipelineService(repo,ws);var targets=run.Targets(f.Target);run.ApplyReady(targets,f.Reports);Equal(2,new AudioFileScanner().Scan(f.Target).Count);
+        var store=new ManualResolutionStore(ws,f.Source);var manual=store.Load();manual.Folders["folder:scope"]=new(){LastKnownPath=f.Source,AlbumSetupConfirmed=true,ReviewFileIds=repo.All().Select(x=>x.Id).ToArray(),Album="Collection",AlbumArtist="Various Artists",Year=2000};store.Save(manual);
+        run.ApplyReady(targets,f.Reports);
+        var mappings=repo.Mappings(f.Target);Equal(2,mappings.Select(x=>x.RelativePath).Distinct(StringComparer.OrdinalIgnoreCase).Count());True(mappings.All(x=>x.RelativePath.Contains("2000 - Collection")));True(mappings.Any(x=>x.RelativePath.Contains("(2)")));
+        foreach(var mapping in mappings){var row=repo.All().Single(x=>x.Id==mapping.FileId);Equal(row.Basic.Sha256,Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(Path.Combine(f.Target,mapping.RelativePath)))));}
+        foreach(var playlist in Directory.EnumerateFiles(Path.Combine(f.Target,"_Playlists"),"*.m3u8",SearchOption.AllDirectories))foreach(var line in File.ReadAllLines(playlist).Where(x=>x.Length>0&&!x.StartsWith('#')))True(File.Exists(Path.GetFullPath(Path.Combine(Path.GetDirectoryName(playlist)!,line))));
+        Equal(before,Snapshot(f.Source));var after=Snapshot(f.Target);
+        var empty=Path.Combine(f.Target,"Empty Artist","Empty Album");Directory.CreateDirectory(empty);
+        var kept=Path.Combine(f.Target,"Keep Notes");Directory.CreateDirectory(kept);File.WriteAllText(Path.Combine(kept,"notes.txt"),"keep");
+        var reserved=Path.Combine(f.Target,"_Reserved","Empty");Directory.CreateDirectory(reserved);
+        run.ApplyReady(targets,f.Reports);True(!Directory.Exists(Path.GetDirectoryName(empty)!));True(File.Exists(Path.Combine(kept,"notes.txt")));True(Directory.Exists(reserved));
+    }
     static void AlbumYearRepairsProcessedTargetAndPlaylists()
     {
         var f=Fixture();File.Copy(f.File,Path.Combine(f.Source,"second.wav"));var ws=ProgressWorkspace(f);var before=Snapshot(f.Source);using var repo=new ProgressRepository(ws);new IncrementalProgressService(repo).Scan(f.Source);

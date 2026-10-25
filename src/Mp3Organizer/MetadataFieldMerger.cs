@@ -6,8 +6,12 @@ public static class MetadataFieldMerger
     public static AudioMetadata Merge(AudioMetadata tags,AudioMetadata fallback,RecordingInfo? recording=null,ReleaseInfo? release=null)
     {
         var sources=new Dictionary<string,string>();
+        var filenameSuggestion=ReviewFilenameSuggestions.Apply(tags);
         string Text(string name,string original,string? online,string lower)
         {
+            if(name=="Title"&&filenameSuggestion.Title!=tags.Title){sources[name]="FilenameFallback";return filenameSuggestion.Title;}
+            if(name=="Title"&&FilenameEncodingRepair.Title(tags) is {} repaired){sources[name]="FilenameEncodingRepair";return repaired;}
+            if(FilenameEncodingRepair.Field(tags,name,original) is {} fixedText){sources[name]="FilenameEncodingRepair";return fixedText;}
             bool Valid(string? value)=>!string.IsNullOrWhiteSpace(value)&&!MetadataQualityEvaluator.Invalid(value)&&(name!="Title"||!MetadataQualityEvaluator.FilenameTitle(tags with{Title=value}));
             if(Valid(original)){sources[name]="Tags";return original;}
             if(Valid(online)){sources[name]="AcoustIdMusicBrainz";return online!;}

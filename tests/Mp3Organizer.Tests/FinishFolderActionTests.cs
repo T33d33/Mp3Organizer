@@ -15,7 +15,7 @@ public static partial class TestRunner
         }
         var store=new ManualResolutionStore(ws,f.Source);var manual=store.Load();manual.Folders["folder:scope"]=new(){LastKnownPath=f.Source,AlbumSetupConfirmed=true,ReviewFileIds=repo.All().Select(x=>x.Id).ToArray(),Album="Christmas",AlbumArtist="Various Artists",Year=2000};store.Save(manual);
         var input=new GuidedReviewInput("F","/q");Equal(2,new CandidateReviewService(repo,ws,input,albumFirst:true).Run());
-        var finished=repo.All().Where(x=>Path.GetDirectoryName(x.CurrentPath)==cd4).OrderBy(x=>x.CurrentPath).ToArray();True(finished.All(x=>x.Status==ProcessingStatus.Ready));Equal("Best fit",finished[0].Effective.Title);Equal("Test Song",finished[1].Effective.Title);True(finished.All(x=>x.Effective.Album=="Christmas"&&x.Effective.Year==2000));
+        var finished=repo.All().Where(x=>Path.GetDirectoryName(x.CurrentPath)==cd4).OrderBy(x=>x.CurrentPath).ToArray();True(finished.All(x=>x.Status==ProcessingStatus.Ready));Equal("Best fit",finished[0].Effective.Title);Equal("Test Song",finished[1].Effective.Title);Equal("Other Album",finished[0].Effective.Album);Equal(2009u,finished[0].Effective.Year);Equal("Christmas",finished[1].Effective.Album);Equal(2000u,finished[1].Effective.Year);
         Equal(ProcessingStatus.NeedsReview,repo.All().Single(x=>Path.GetDirectoryName(x.CurrentPath)==cd5).Status);
         True(input.Output.Any(x=>x.Contains("[F] Finish (MerryChristmasEverybody")));Equal(before,Snapshot(f.Source));
     }

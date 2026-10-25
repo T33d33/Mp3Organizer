@@ -76,10 +76,10 @@ public static class ProgressCommands
         if(pipeline!=null){reports??=Path.Combine(workspace,"reports");foreach(var destination in targets!.Values)PathSafetyGuard.Separate(destination,reports);}
         var sessions=new Dictionary<string,IdentificationSession>(StringComparer.OrdinalIgnoreCase);
         var resolvers=new Dictionary<string,IMetadataResolver>(StringComparer.OrdinalIgnoreCase);
-        var useCodex=!offline&&(codex??(online&&!string.Equals(Environment.GetEnvironmentVariable("MP3ORGANIZER_CODEX_ENABLED"),"false",StringComparison.OrdinalIgnoreCase)));
+        var useCodex=!offline&&(codex??(online&&!string.Equals(SavedSettings.Read("MP3ORGANIZER_CODEX_ENABLED"),"false",StringComparison.OrdinalIgnoreCase)));
         var codexState=new CodexRunState();using var codexHttp=new HttpClient{Timeout=TimeSpan.FromSeconds(90)};
         var observer=new LlmObservability(Console.WriteLine,repository);
-        var codexClient=new CodexClient(codexHttp,Environment.GetEnvironmentVariable("OPENAI_API_KEY")??"",Environment.GetEnvironmentVariable("MP3ORGANIZER_CODEX_MODEL")??"",observer:observer);
+        var codexClient=new CodexClient(codexHttp,SavedSettings.Read("OPENAI_API_KEY")??"",SavedSettings.Read("MP3ORGANIZER_CODEX_MODEL")??"",observer:observer);
         Console.WriteLine(useCodex?"Codex reasoning enabled (OpenAI API; factual candidates only).":"Codex reasoning disabled (offline or explicit configuration; deterministic analysis only).");
         var progress=new ConsoleProgress();
         try

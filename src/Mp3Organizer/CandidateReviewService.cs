@@ -21,10 +21,23 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
             var folderLabel=Path.GetRelativePath(item.SourceRoot,currentFolder);
             if(albumFirst&&!new AlbumSetupService(repository,workspace,console).Ensure(item))return ManuallyReviewedCount;
             item=repository.All().Single(x=>x.Id==item.Id);
-            var row=item.Effective;var candidates=(row.Identification?.Candidates??[]).Take(9).ToList();
+            var row=ReviewFilenameSuggestions.Apply(item.Effective);
+            if(FilenameEncodingRepair.Title(row) is {} repairedTitle)
+            {
+                row=row with{Title=repairedTitle};
+                console.Write("Title suggestion repaired using matching filename: "+repairedTitle+" (saved only when accepted).");
+            }
+            row=FilenameEncodingRepair.Apply(row);
+            var candidates=(row.Identification?.Candidates??[]).Take(9).ToList();
             var recommended=candidates.Count==0?0:candidates.Select((x,i)=>(x.Confidence,Index:i+1)).OrderByDescending(x=>x.Confidence).First().Index;
             while(true)
             {
+                if(!drafts.ContainsKey(item.CurrentPath)&&MetadataQualityEvaluator.Invalid(row.Artist)
+                    &&!MetadataQualityEvaluator.Invalid(row.AlbumArtist)&&!ReviewService.CompilationAlbumArtist(row.AlbumArtist))
+                {
+                    row=row with{Artist=row.AlbumArtist,TrackArtists=[row.AlbumArtist]};
+                    console.Write("Artist suggestion: "+row.Artist+" (from Album Artist; saved when accepted).");
+                }
                 if(albumFirst&&item.Effective.Track==0)
                 {
                     var next=AlbumTrackSequence.Suggest(item,repository.All(),new AlbumSetupService(repository,workspace,console).Context(item)?.ReviewFileIds);
@@ -37,7 +50,19 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
                 for(var i=0;i<candidates.Count;i++)console.Write($"\n[{i+1}] Candidate\n{Display(candidates[i].Metadata)}");
                 console.Write((recommended>0?$"Recommended candidate: {recommended} (highest evidence score; not verified)\n[Enter] Save recommended candidate and continue | [1-{candidates.Count}] Select candidate":"No online candidates. [Enter] Save current metadata and continue")+"\n[M] Manual editing | [P] Play | [D] Defer | [/q] Stop");
                 console.Write($"[F] Finish ({folderLabel}) — accept as Enter for this folder only.");
+                console.Write("[B] Edit album for this folder (Album Artist, Album, Year).");
                 Prompt(item.CurrentPath,"Action [Enter = save and next; M = edit fields] | [P] Play | [D] Defer | [/back] Previous file | [/q] Stop:");var command=finishFolder!=null?"":console.Read()?.Trim();if(command==null||command.Equals("/q",StringComparison.OrdinalIgnoreCase)||command.Equals("q",StringComparison.OrdinalIgnoreCase))return ManuallyReviewedCount;
+                if(command.Equals("B",StringComparison.OrdinalIgnoreCase))
+                {
+                    finishFolder=null;
+                    var edit=new FolderAlbumEditor(repository,workspace,console).Edit(item);if(edit.Stop)return ManuallyReviewedCount;
+                    if(edit.Saved)
+                    {
+                        item=repository.All().Single(x=>x.Id==item.Id);row=item.Effective;
+                        if(drafts.TryGetValue(item.CurrentPath,out var priorDraft))drafts[item.CurrentPath]=priorDraft with{Album=row.Album,AlbumArtist=row.AlbumArtist,Year=row.Year};
+                    }
+                    continue;
+                }
                 if(command.Equals("F",StringComparison.OrdinalIgnoreCase))
                 {
                     finishFolder=currentFolder;console.Write($"Finishing ({folderLabel}) using Enter decisions.");command="";
@@ -54,7 +79,7 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
                     try{PathSafetyGuard.NoLinks(item.CurrentPath);if(play!=null)play(item.CurrentPath);else System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(item.CurrentPath){UseShellExecute=true});}
                     catch(Exception e) when(e is IOException or InvalidOperationException or System.ComponentModel.Win32Exception){console.Write("Playback failed: "+e.Message);}continue;
                 }
-                TagMetadata selected;var manual=command.Equals("M",StringComparison.OrdinalIgnoreCase);
+                TagMetadata selected;var selectedCandidate=false;var manual=command.Equals("M",StringComparison.OrdinalIgnoreCase);
                 if(manual)
                 {
                     var edited=Edit(item.CurrentPath,TagMetadata.From(row));if(edited.Stop)return ManuallyReviewedCount;if(edited.Value==null)continue;selected=edited.Value;
@@ -66,12 +91,13 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
                     if(number==0)selected=TagMetadata.From(row);
                     else
                     {
+                        selectedCandidate=true;
                         var c=candidates[number-1].Metadata;
                         string Keep(string higher,string lower)=>MetadataQualityEvaluator.Invalid(higher)?lower:higher;
                         selected=new(Keep(c.Artist,row.Artist),Keep(c.AlbumArtist,row.AlbumArtist),Keep(c.Album,row.Album),Keep(c.Title,row.Title),c.Track>0?c.Track:row.Track,c.Disc>0?c.Disc:row.Disc,c.Year>0?c.Year:row.Year);
                     }
                 }
-                if(albumFirst&&new AlbumSetupService(repository,workspace,console).Context(item) is {} context)
+                if(!selectedCandidate&&albumFirst&&new AlbumSetupService(repository,workspace,console).Context(item) is {} context)
                     selected=selected with{Album=context.Album??selected.Album,AlbumArtist=context.AlbumArtist??selected.AlbumArtist,Year=context.Year??selected.Year};
                 drafts[item.CurrentPath]=selected;
                 var albumDecision=false;
@@ -84,9 +110,21 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
                 }
                 var actual=new TagLibMetadataReader(new ReadOnlySource()).Read(item.CurrentPath);if(actual.Error!=""||actual.Sha256!=item.Basic.Sha256){console.Write("File changed; scan before reviewing.");break;}
                 var store=new ManualResolutionStore(workspace,item.SourceRoot);var data=store.Load();var key="sha256:"+item.Basic.Sha256.ToLowerInvariant();
+                if(selectedCandidate&&albumFirst)
+                {
+                    // Explicit candidate acceptance is a decision for this occurrence,
+                    // not a change to the album context of other songs or SHA duplicates.
+                    foreach(var entry in data.Folders.ToArray())
+                        if(entry.Value.ReviewFileIds?.Contains(item.Id)==true)
+                            data.Folders[entry.Key]=entry.Value with{ReviewFileIds=entry.Value.ReviewFileIds.Where(id=>id!=item.Id).ToArray()};
+                }
                 // Empty strings explicitly clear text; zero represents a deliberate unknown number.
                 var value=new ManualOverride{LastKnownPath=item.CurrentPath,ConfirmedLooseTrack=string.IsNullOrWhiteSpace(selected.Album),Artist=selected.Artist,AlbumArtist=selected.AlbumArtist,Album=selected.Album,Title=selected.Title,TrackNumber=selected.Track,Year=selected.Year,YearTrackOnly=!albumDecision,DiscNumber=selected.Disc==0?null:selected.Disc};
-                if(albumFirst&&new AlbumSetupService(repository,workspace,console).Context(item)!=null)
+                data.Files.TryGetValue(key,out var previousCandidate);
+                var acceptedCandidates=new Dictionary<string,TagMetadata>(previousCandidate?.AcceptedCandidateMetadata??new());
+                if(selectedCandidate||acceptedCandidates.ContainsKey(item.Id))acceptedCandidates[item.Id]=selected;
+                if(acceptedCandidates.Count>0)value=value with{CandidateReviewFileIds=acceptedCandidates.Keys.ToArray(),AcceptedCandidateMetadata=acceptedCandidates};
+                if(!selectedCandidate&&albumFirst&&new AlbumSetupService(repository,workspace,console).Context(item)!=null)
                 {
                     // Album context is keyed by file IDs, not content hash: do not leak it to an identical file outside the scope.
                     data.Files.TryGetValue(key,out var prior);

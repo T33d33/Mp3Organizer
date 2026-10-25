@@ -1,174 +1,281 @@
-# Mp3Organizer — quick start
+# MP3 Organizer — start here
 
-**[Normal workflow: scan + run](RUN.md)** — automatically analyze and apply eligible files; leave NeedsReview pending.
+This application identifies your music, keeps progress between runs, copies resolved tracks into an organized library, and rebuilds playlists to point to those copies. You can stop, restart Windows, and continue using the same workspace.
 
-**[Folder playlists, permanent IDs and migration of old Ready metadata](FOLDERS.md)** — source grouping is preserved independently from Artist/Album metadata, without classification prompts.
+**Use the launchers in this folder. Do not select a DLL from an `artifacts-*` folder or reuse old `$dll` commands from this chat.** The main launcher selects the current build.
 
-**[Import original playlists with permanent spoken codes](PLAYLIST-IMPORT.md)** — scan discovers playlists; run rewrites their entries to verified organized paths under `_Playlist-Folder` after copying finishes.
+## Quick start
 
-**[Complete command guide: configuration, every command, examples and troubleshooting](COMMANDS.md)**
+### Double-click these numbered files in order
 
-**[Runtime Codex/LLM recognition, original album years, review, quota recovery and verified tag writes](RECOGNITION.md)**
+After copying new music into `E:\Mp3-Ai-test`, launch each step and wait for it to finish before opening the next:
 
-**[LLM request messages, batch statistics and cumulative activity counts](OBSERVABILITY.md)**
+| Order | Double-click | What it does |
+|---|---|---|
+| 1 | **01.Scan.cmd** | Discovers new/changed files throughout the source tree while preserving existing progress. |
+| 2 | **02.Analyze-and-Organize.cmd** | Identifies pending music and automatically organizes resolved/Ready tracks. Creates the NeedsReview queue for uncertain tracks. |
+| 3 | **03.Review.cmd** | Lets you accept or edit unresolved tracks. Optional when Needs review is zero. Type `/q` to finish your review session. |
+| 4 | **04.Apply-Reviewed.cmd** | Runs processing again to organize the tracks you accepted and update playlists. |
+| Optional | **05.Status.cmd** | Shows the saved counts at any time. |
 
-Use the latest build directly with `dotnet`, rather than an older `.cmd` launcher. Start each PowerShell session with:
+**Review must follow analysis:** scan only discovers files, so starting review immediately after scan will not show new files that have not been analyzed yet.
 
-```powershell
-$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-finish-folder\Mp3Organizer.dll'
-$source = 'E:\Mp3-Ai-test'
-$target = 'E:\Mp3-Ai-test-organized'
-$workspace = 'E:\Mp3-Ai-test-workspace'
-$reports = 'E:\Mp3-Ai-test-reports'
-```
+There is no additional step after 4. The `run` pipeline already performs planning and applying. Step 4 is deliberately the same processing command as step 2, executed after your review decisions. You can leave unresolved tracks pending. Errors remain visible and need separate investigation.
 
-Configure online identification using your AcoustID **application key**, actual fpcalc executable path and real MusicBrainz contact:
+Each window explains its purpose, reports errors, and shows the next step. No terminal commands or `$dll` variables are needed. The scripts use the E: paths listed below and the current `Mp3Organizer.cmd` launcher. They do not reset progress or modify source audio.
 
-```powershell
-$env:ACOUSTID_API_KEY = 'YOUR_ACOUSTID_APPLICATION_KEY'
-$env:CHROMAPRINT_FPCALC = 'C:\Tools\Chromaprint\fpcalc.exe'
-$env:MP3ORGANIZER_CONTACT = 'your-email@example.com'
-$env:OPENAI_API_KEY = 'YOUR_OPENAI_API_KEY'
-$env:MP3ORGANIZER_CODEX_MODEL = 'YOUR_ACCESSIBLE_RESPONSES_MODEL_WITH_STRUCTURED_OUTPUTS'
+Use `Setup-Online.cmd` only for first-time configuration or missing settings, not on every run. `Resume-Processing.cmd` remains a compatible shortcut to the processing pipeline, but the numbered files make the complete workflow clearer.
 
-dotnet $dll doctor --workspace $workspace
-```
+### Continue where you stopped
 
-Obtain the application key through the [official AcoustID documentation](https://acoustid.org/webservice); obtain fpcalc from [Chromaprint](https://acoustid.org/chromaprint). The [complete guide](COMMANDS.md) explains persistent configuration, MusicBrainz setup, diagnostics and offline use. These example values must be replaced before online use.
+Double-click **`Resume-Processing.cmd`** in this folder.
 
-Recommended incremental workflow:
+It uses your saved configuration and these locations:
 
-```powershell
-dotnet $dll scan $source --workspace $workspace
-dotnet $dll run --online --workspace $workspace
-dotnet $dll status --workspace $workspace
-```
+| Purpose | Location |
+|---|---|
+| Original music | `E:\Mp3-Ai-test` |
+| Organized copies | `E:\Mp3-Ai-test-organized` |
+| Saved progress and manual decisions | `E:\Mp3-Ai-test-workspace` |
+| Processing reports | `E:\Mp3-Ai-test-reports` |
 
-Repeat `scan` after adding folders, then `run` with the same workspace. Do not reset existing progress. `run` analyzes pending files and automatically copies Ready files into `E:\Mp3-Ai-test-organized`, marking successful entries Processed. NeedsReview, Error, Processed and Skipped files are skipped. Reports default to workspace/reports. Use `--target` for a persisted custom target and `--reports` to override report output for that invocation. `--online` enables factual lookup followed by runtime LLM reasoning for ambiguity. Use `--no-codex` for deterministic-only online analysis, or `--offline` for local/cached analysis; offline run still copies Ready files. The LLM uses your OpenAI API key/model, not this desktop chat's quota.
+This resumes already indexed work. It does **not** discover newly added folders. See the next section when adding music.
 
-MP3 tags are read-only by default. Add `--write-tags` to `run` or incremental `analyze` to write reliable missing metadata during analysis, including original four-digit years. Existing years remain unchanged automatically; audio payloads are verified byte-for-byte and full backups retained. Adding the flag later does not revisit already Ready/Processed files.
+### Add new music and process it
 
-Review uncertain entries whenever convenient, then continue:
+1. Copy the new music into `E:\Mp3-Ai-test`.
+2. Open this project folder in File Explorer, right-click its background, and choose **Open in Terminal**. Use PowerShell.
+3. Run:
 
 ```powershell
-dotnet $dll review --workspace $workspace
-dotnet $dll run --online --workspace $workspace
+.\Mp3Organizer.cmd scan 'E:\Mp3-Ai-test' --workspace 'E:\Mp3-Ai-test-workspace'
+.\Resume-Processing.cmd
 ```
 
-Lower-level planning and simulation remain available for diagnostics instead of automatic run:
+Scan checks the entire source tree again. Existing unchanged files keep their progress; new files are added. You do not need to name each new album folder.
+
+### Review unresolved tracks
+
+When processing reports **Needs review**, run:
 
 ```powershell
-dotnet $dll review --workspace $workspace
-dotnet $dll plan $source $target --workspace $workspace --reports $reports
-dotnet $dll apply $source $target --workspace $workspace --reports $reports --dry-run
+.\Mp3Organizer.cmd review --workspace 'E:\Mp3-Ai-test-workspace'
 ```
 
-After inspecting the plan, explicitly copy selected files with:
+After accepting or editing tracks, run:
 
 ```powershell
-dotnet $dll apply $source $target --workspace $workspace --reports $reports
+.\Resume-Processing.cmd
 ```
 
-Use `review --write-tags` to update MP3 tags after confirming a review decision. Full-source resolve/plan are not limited to the last analysis batch; apply writes only organized target copies/control files. The older `resolve --edit-manual` remains available for folder-based overrides; its controls are **Enter = accept, Backspace = delete text, Alt+Left = previous, Esc = skip/abort folder**. The new `review` command operates only on the persistent NeedsReview queue.
+**Review saves decisions; the following run organizes the accepted tracks.** You can leave other tracks unresolved and continue working.
 
-These examples have not been executed against your library while writing this documentation. Keep workspace and reports outside both source and target.
-
-Further references: [all commands](COMMANDS.md), [incremental progress/schema](PROGRESS.md), [identification details](IDENTIFICATION.md), [manual/cache internals](WORKFLOW.md). Historical build paths in older notes should not replace the current DLL path above.
-
-## Build and test
-
-Normal SDK build:
+### Check progress
 
 ```powershell
-dotnet restore Mp3Organizer.slnx --configfile NuGet.Config
-dotnet build Mp3Organizer.slnx --no-restore -c Release
-dotnet run --project tests/Mp3Organizer.Tests/Tests.csproj -c Release --no-build
+.\Mp3Organizer.cmd status --workspace 'E:\Mp3-Ai-test-workspace'
 ```
 
-The tests use a dependency-free executable test runner with assertions and nonzero exit status on failure; `dotnet test` is not the runner for this solution. Tests create synthetic WAV fixtures in an isolated directory; an optional argument selects their parent directory. They never access your real library. Fixtures are retained for inspection.
+### If your terminal opens in `C:\Windows\system32`
 
-This environment denied access to the user-level NuGet configuration and rejected an escalation request. Both projects were therefore compiled with the installed .NET 10 Roslyn compiler and reference assemblies, using the already installed TagLibSharp package, without accessing that configuration or downloading dependencies:
+First switch to this project folder:
 
 ```powershell
-.\build-offline.ps1 -OutputDirectory artifacts-finish-folder
-dotnet artifacts-finish-folder/Mp3Organizer.Tests.dll "path/to/test-scratch"
+cd 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer'
 ```
 
-The offline script accepts `-TagLibDll` for a different installed TagLibSharp 2.3.0 DLL path. It treats warnings as errors. The current prebuilt application and tests are in `artifacts-finish-folder`. Standard NuGet/MSBuild restore remains unverified in this restricted environment.
+Then use the short commands above. Repeat `cd` in a new terminal if necessary; you do not need to repeat API setup.
 
-## Safety and execution
-
-- Ordinary source file handles use `FileMode.Open`, `FileAccess.Read`, and read-only sharing. The TagLib reader rejects write streams, including attempted `Save()` calls. Only the dedicated, explicitly enabled MP3 tag writer can replace a source file after backup and verification that its audio payload is unchanged.
-- The configured source and the supplied real-library path are protected from output writes. Overlapping roots, directory/file links and junctions, device paths, alternate data streams, path traversal, and ambiguous Windows names are rejected.
-- First use requires an empty or absent target. Later runs require its managed marker and matching source. `playlists` only operates on a managed target.
-- Planning writes reports and a checksummed JSON plan outside both libraries. It makes no target changes. Apply validates every source audio hash, the source inventory, the complete target snapshot, destination paths, mapping continuity, and playlist references before copying. `--dry-run` performs these checks and writes nothing.
-- Audio copies use uniquely named target partial files, SHA-256 verification, and a final move with overwrite disabled. Existing matching destinations are `AlreadyPresent`; collisions get a deterministic suffix in the plan. Existing different audio is never overwritten.
-- In the target, only managed mapping/playlist/control files are deliberately replaced. Previous versions are backed up under `.mp3organizer-backups`. Unmanaged playlist collisions block the operation. Old managed playlists become empty if their tracks disappear; they are not deleted. Explicit source tag edits have separate retained backups/journals under `workspace/tag-writes`.
-- After an interruption, run `plan` again: verified completed copies become `AlreadyPresent`. Partial target files remain for inspection. A missing/corrupt mapping stops processing; restore it from backup or recover its contents from the saved plan before proceeding. There is no automatic destructive cleanup.
-- No filesystem application can guarantee immutability against another process changing directory mappings concurrently or against externally configured aliases to the same share. Use read-only source permissions when tag edits are not wanted; explicit tag writing needs write permissions. Tests cover default source immutability and the opt-in writer's audio preservation. Run one organizer process per target at a time.
-
-## Metadata, duplicate policy, and paths
-
-Supported extensions (case-insensitive): `.mp3`, `.flac`, `.m4a`, `.aac`, `.ogg`, `.wav`, `.wma`. Recursive scanning reports inaccessible entries and skips links. Plan/apply fail closed if source or target metadata cannot be read completely.
-
-Metadata includes path, filename, artist(s), album artist, album, title, track, disc, year/date, duration, extension, bitrate, codec, size, and SHA-256. Full ID3v2 TDRC and Vorbis DATE values are retained when available; other formats fall back to year. Raw tags remain unchanged. Normalization uses Unicode NFKC, invariant uppercase, trimming, and whitespace collapsing; it preserves punctuation and accents.
-
-Candidates have matching normalized Artist + Title and durations within three seconds of every member of their group. Unknown/zero durations and missing identities are excluded. Non-identical files are retained for review regardless of apparent quality. Only matching SHA-256 plus size causes an automatic skip; the lexically first source path is selected deterministically. `IDuplicateEquivalenceVerifier` is the extension point for future acoustic evidence. Decisions and their evidence already belong to the saved plan model. `AudioQualityComparer` supplies lossless/bitrate policy for verified equivalents, but quality never establishes equivalence and does not eliminate different encodings in version 1. Lossless bitrate is not used as a fidelity ranking.
-
-Paths:
+## The normal process
 
 ```text
-Artist/YYYY - Album/NN - Title.ext
-Artist/Title.ext
-Various Artists/YYYY - Album/NN - Title.ext
+New music in the source folder
+             |
+            scan       Discover files and preserve existing progress
+             |
+            run        Analyze pending files and organize Ready files
+             |
+       NeedsReview? ---- no ----> Done for the eligible files
+             |
+           review      Accept candidates or edit metadata
+             |
+            run        Organize the newly accepted files
 ```
 
-Album folders use AlbumArtist, falling back to Artist. Missing values become `Unknown Artist`, `Unknown Year`, the original filename stem, and track `00`. Disc 2 onward uses `D02 - NN - Title.ext`. Invalid characters and reserved names are sanitized; application-owned top-level names are escaped. Long paths block planning rather than truncate silently. Same album title with different years is treated as separate albums. Separate releases with identical owner/title/year are not distinguished in version 1.
+- **scan** inventories the complete source tree and discovers source playlists. It does not organize the music.
+- **run** analyzes pending tracks, uses configured recognition services where needed, and continues automatically through organization. It also handles existing Ready tracks, applies supported album corrections, regenerates playlists, and removes empty artist/album directories left behind in the managed target.
+- **review** handles the persisted NeedsReview queue. It does not analyze pending files and does not perform the final organization stage.
+- **status** reports the saved state. It does not start processing.
 
-## Persistent identities and playlists
+If you only stopped a previous run and added nothing, resume it. No scan or reset is required just because you restarted your computer.
 
-`playlist-map.json` stores normalized lookup keys separately from original display names. Both counters are monotonic. Entries remain even when artists/albums disappear. Renumbering, removing existing identities, lowering counters, or reusing IDs is rejected. A changed normalized artist name or album title/year is treated as a new identity; automatic artist merging is intentionally absent.
+## What the status means
 
-```json
-{
-  "schemaVersion": 1,
-  "nextArtistId": 124,
-  "artists": {
-    "MONIKA BRODKA": {
-      "artistId": 123,
-      "displayName": "Monika Brodka",
-      "nextAlbumId": 2,
-      "albums": {
-        "GRANDA|2010": { "albumId": 1, "displayName": "Granda" }
-      }
-    }
-  }
-}
+| Status | Meaning / next action |
+|---|---|
+| Pending analysis | Indexed files still need analysis. Run processing. |
+| Ready to apply | Metadata is accepted, but organization is not complete. Run processing. |
+| Processed | Organization completed and the final target mapping was saved. Normal runs skip repeating this work. |
+| Needs review | Automatic resolution was insufficient. Use review when convenient. These files remain blocked from normal organization. |
+| Error | A file encountered a failure. Inspect the error before retrying/resetting it. Running review does not fix Error entries. |
+| Skipped | Excluded from normal processing until explicitly reset. |
+
+A run can finish successfully while NeedsReview or Error entries remain. That is not the same as every file being complete.
+
+`Analyzed this batch: 0` is normal when no analysis is pending. The run may still organize many previously Ready files.
+
+`Pending Review: 0` means there is nothing in NeedsReview. It does not mean all files are Processed; check status for pending analysis, Ready entries, and errors.
+
+LLM batch counters describe the current run. Cumulative counters can include failures from older runs. A historical `Codex unavailable` count does not prove the current run made or failed an API request.
+
+## Review controls
+
+Type the action and press **Enter**. Commands apply to the prompt currently displayed.
+
+### At the track action / candidate screen
+
+| Input | Action |
+|---|---|
+| Enter | Save the recommended candidate when candidates exist; otherwise save current metadata, then continue. |
+| A displayed candidate number | Select and save that candidate. Numbers are candidate choices only at this screen. |
+| `M` | Open manual track editing. |
+| `B` | Edit Album Artist, Album and Year for the current immediate folder; review and confirm the scope before saving. |
+| `P` | Play the current audio file with its associated player. |
+| `D` | Defer this file; leave it NeedsReview and continue. This is not a permanent skip. |
+| `F` | Finish the current immediate folder using the same decisions as repeated Enter. Stops at the next folder, even within a larger album review scope. |
+| `/back` | Revisit the previous file in this review session. |
+| `/q` | Stop review; decisions already saved are retained. |
+
+A recommendation is the highest-scoring available candidate, not proof that it is correct. Use F only when you are comfortable accepting the remaining recommendations/defaults for that folder.
+
+### While editing a field manually
+
+| Input | Action |
+|---|---|
+| Enter | Keep the displayed value. |
+| Replacement text | Replace that field. Numbers here are field values, not candidate choices. |
+| `/clear` | Clear the field. |
+| `/back` | Go to the previous editable field. |
+| `/cancel` | Return to selection without saving; the session draft is retained. |
+| `/q` | Stop review. |
+| Backspace | Delete typed characters normally. It does not navigate. |
+
+Manual editing ends with a proposed-result summary. Enter confirms it in normal review. Do not type metadata into an **Action** prompt; choose M first.
+
+### Album setup and scope
+
+When shared metadata needs a decision, review asks about **Album Artist, Album, and Year** before track editing. Read the scope path and number of tracks in the summary before confirming: a scope can include nested folders. Confirmed scope membership is persisted.
+
+Album context is reused for tracks in that confirmed scope. Track Artist, Title, and Track Number are not copied from one song to others. In the album-first workflow, M edits those track fields; it does not ask for the album year on every song.
+
+A source folder name is not automatic album metadata. However, if you explicitly confirm `Christmas / Various Artists / 2000` for a scope, that is an album decision: it can place those tracks together under `Various Artists\2000 - Christmas`. Original folder grouping is preserved separately through Folder playlists.
+
+## Which launcher should I use?
+
+| File | Purpose |
+|---|---|
+| **`Resume-Processing.cmd`** | Recommended everyday resume button for the E: source/workspace/target paths above. Keeps the window open so you can read the result. |
+| **`Mp3Organizer.cmd`** | Current application launcher for scan, review, status, run, and advanced commands. Use this for commands in a terminal. |
+| **`Setup-Online.cmd`** | One-time online setup, or repair genuinely missing settings. It explains each input and reuses saved values. |
+| `Setup-Online.ps1` | Implementation of the setup helper. Prefer the `.cmd` wrapper. |
+| `Mp3Organizer.ps1` | Alternative PowerShell launcher. Not needed; execution policy can block it. Prefer `.cmd`. |
+| `build-offline.ps1` | Developer build script, not a music-processing command. |
+| `Mp3Organizer-fieldmerge.cmd` | Historical launcher for an older build. Do not use for normal processing. |
+| `artifacts-*` directories | Compiled build versions retained from development. Do not choose among them manually. |
+
+The `.cmd` files work from PowerShell. Do not change the system execution policy just to run the application.
+
+Resume is specifically configured for this test-library workflow. For a different source/workspace, use `Mp3Organizer.cmd` with explicit paths and a separate workspace/target rather than casually switching this existing library's target.
+
+## Configuration: saved once, reused after restart
+
+Run `Setup-Online.cmd` only when setting up a new machine or correcting missing settings. Required online settings are:
+
+- `ACOUSTID_API_KEY`: your AcoustID application/client key.
+- `MP3ORGANIZER_CONTACT`: your contact email or URL for MusicBrainz requests.
+- `CHROMAPRINT_FPCALC`: the installed fingerprint tool, when it is not discoverable on PATH.
+
+Setup saves these in Windows user environment settings. The application reads process values first, then saved Windows user/system values, so newly saved values are usable even from an older terminal. A nonempty process value overrides a saved value. Keys are not stored in this README or source code. Windows environment storage is not encrypted.
+
+Optional LLM settings are `OPENAI_API_KEY` and `MP3ORGANIZER_CODEX_MODEL`. The setup helper preserves existing values; it does not select an OpenAI model for you. Missing/unavailable LLM service uses the existing fallback and may leave tracks NeedsReview. See [recognition configuration](RECOGNITION.md) for details.
+
+Missing required AcoustID/MusicBrainz/fingerprint configuration still blocks an explicitly online run. To process using offline recognition and already accepted results instead:
+
+```powershell
+.\Mp3Organizer.cmd run --offline --workspace 'E:\Mp3-Ai-test-workspace' --target 'E:\Mp3-Ai-test-organized' --reports 'E:\Mp3-Ai-test-reports'
 ```
 
-Artist IDs start at 1. Album IDs start at 1 per artist and are permanently limited to 99 so concatenation is unambiguous. Exceeding that limit fails explicitly. Example filenames:
+## Files, playlists, and safety
+
+Normal commands above copy/organize files into the target. They do not delete, rename, or re-encode source audio. Explicit `--write-tags` is a separate advanced option with confirmation; it is not part of this quick start.
 
 ```text
-_Playlists/Artists/Code 123 - Monika Brodka.m3u8
-_Playlists/Albums/Code 12301 - Monika Brodka - Granda.m3u8
+E:\Mp3-Ai-test-organized\
+    Artist\
+        Year - Album\
+            Track - Title.mp3
+    Various Artists\
+        Year - Compilation\
+            Track - Title.mp3
+    _Playlists\
+        Albums\
+        Artists\
+        Folders\
+        Original Playlists\
 ```
 
-M3U8 uses UTF-8 without BOM and paths relative to the playlist directory. Albums sort by disc, track, then path. Each separately tagged performer receives an artist playlist, including compilation tracks. No global Various Artists artist playlist is generated; compilation album playlists are generated normally. Missing track artists use Unknown Artist.
+- **Albums / Artists** reflect resolved metadata.
+- **Folders** preserve original source-folder grouping with stable FOLDER IDs.
+- **Original Playlists** contain imported source playlists rewritten to final organized paths, with stable playlist codes.
+- Unresolved playlist members stay recorded but are omitted from playable output until resolved. Later runs rebuild the lists.
+- Verified duplicate source occurrences can reference the same physical target file. Thus the Processed count can exceed the physical audio-file count.
+- Album corrections can move organized copies. Filename collisions get distinct names rather than overwriting audio.
+- Empty artist/album folders are cleaned up after successful processing. Source folders, reserved target folders, and folders containing files are preserved.
 
-### Human-readable code index
+Keep the workspace and hidden target management files. They contain progress, manual decisions, IDs, mappings, and recovery information. Do not delete them or run reset commands as a routine restart step. Back them up along with the library when the application is stopped.
 
-Every `apply` and `playlists` run generates `playlist-index.csv` in the target root, encoded as UTF-8 without BOM. Columns are `Code,Type,Artist,Album,PlaylistPath`. Artist rows come first, sorted numerically by artist ID; album rows follow, sorted numerically by artist ID and album ID. Paths are relative to the target root and use Windows backslashes. Quoting handles commas and quotes in display names.
+## Working with the code in VS Code
 
-The index is a read-only projection of `playlist-map.json` and the generated playlist set: deleting or losing the index never assigns new IDs. Regeneration restores it from the same mapping. It includes retained empty playlists for retired identities, but no global Various Artists artist entry. An existing user-owned file with that name is not overwritten; managed replacements receive the same backups as playlists.
+Open **this Mp3Organizer folder**, not an `artifacts-*` folder. The solution is `Mp3Organizer.slnx`; application source is under `src`, tests under `tests`.
 
-Plan report directories also contain a preview `playlist-index.csv`. Their `albums.csv` includes a `Code` column with the same spoken album code. Source-only analysis leaves that column blank because it has no target identity mapping; it does not allocate IDs to populate the report.
+The existing offline build script requires the .NET 10 SDK/reference pack and TagLibSharp 2.3.0 (cached locally, or supplied through `-TagLibDll`). To create a separate development build:
 
-## Reports
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build-offline.ps1 -OutputDirectory artifacts-dev
+dotnet .\artifacts-dev\Mp3Organizer.Tests.dll "$env:TEMP\Mp3Organizer-tests"
+```
 
-Each analysis/plan has its own report directory. Planning produces `library.csv`, `missing-tags.csv`, `duplicates.csv`, `conflicts.csv`, `albums.csv`, `copy-plan.csv`, `copy-plan.json`, and its SHA-256 checksum. Analysis produces the applicable inventory reports without a copy plan. CSV uses UTF-8, quoted fields, invariant numeric formatting, and spreadsheet formula neutralization.
+The tests generate synthetic fixtures. Use their custom executable rather than assuming `dotnet test` runs this suite. Building `artifacts-dev` does not change the normal launcher; test development builds explicitly before changing which build the launcher selects.
 
-Summary album counts use normalized album owner/title/year. Loose tracks mean missing album tags. Unreadable files are counted in total files and errors but not misclassified as confirmed missing tags. `conflicts.csv` distinguishes blocking issues from resolved filename collisions. Exact destination paths appear in `copy-plan.csv`.
+## Further reference
 
+The quick start above is the recommended everyday workflow. Lower-level analyze/plan/apply commands remain available for diagnostics and development; you do not need to run them separately during normal use.
 
+- [Full command reference](COMMANDS.md)
+- [Run pipeline](RUN.md)
+- [Recognition and service configuration](RECOGNITION.md)
+- [Review UI details](REVIEW-UI.md)
+- [Source-folder playlists](FOLDERS.md)
+- [Imported playlists](PLAYLIST-IMPORT.md)
+- [LLM diagnostics](OBSERVABILITY.md)
 
+Some older notes describe earlier build-specific commands. Prefer the stable launchers and workflow in this README.
 
+### Candidate album priority
+Enter (recommended candidate) or a displayed candidate number accepts that candidate's Album, Album Artist, Year and Track as well as Artist and Title. The confirmed folder/album context does not silently replace those values. Missing candidate fields retain current defaults. Candidate decisions are persisted for the source occurrence so identical audio in another source folder does not inherit its album choice. Without candidates, Enter still accepts current defaults. Previously accepted tracks are not retrospectively changed by this update.
+
+### Identified album beneath an older parent scope
+When a nested folder still inherits a broad parent album decision, review checks candidates for files directly in that folder. If at least two tracks and at least 80% of the folder have unambiguous, agreeing Album/Album Artist/Year candidates, with no conflicting album candidates, review offers one identified-album correction. A single-artist proposal also requires every track's current artist to agree. Enter confirms that exact direct-file scope (including Ready/Processed); /q leaves it unchanged. Existing explicit candidate decisions remain protected. The correction does not change track Artist, Title, Track number or resolution status; unsupported tracks remain for review. New files and child/sibling folders are excluded. Other ambiguous older scopes are not silently rewritten. Various Artists represents an album-level compilation decision, not merely a directory of unrelated songs or genres.
+
+### Manually correct an album without online candidates
+At a track action prompt, enter B. Enter Album Artist, Album, and Year once. Suggestions use existing metadata, not the directory name. Enter keeps a default; /clear clears; /back revisits; /cancel discards the album draft; /q stops review. The summary lists the count and scope before Enter/YES saves. This changes shared album fields for indexed NeedsReview/Ready/Processed tracks directly in that folder, including prior candidate album decisions. It excludes child/sibling folders and Skipped/Error/pending tracks. It preserves track Artist, Title, Track number and status. Run Resume-Processing.cmd afterward to correct managed organized copies and playlists. M continues to edit only track fields; B edits the album. A later explicit candidate acceptance can again choose that candidate's album for its track.
+
+### Damaged tag encoding versus a correct filename
+For numbered filenames, title suggestions can repair a tag decoded with the wrong Latin-1/Windows-1252 encoding when reversing it to Windows-1250 or UTF-8 exactly matches the parsed filename title (normalized case/spacing). For example, wybraæ becomes wybrać when the filename independently confirms that spelling. Analysis records FilenameEncodingRepair provenance. Review also repairs old stored suggestions in memory and saves only when accepted. Explicit manual titles and MusicBrainz-sourced titles are preserved. This does not rename sources, rewrite source tags, repair arbitrary artist names, or retroactively change already accepted tracks.
+
+### Underscore-separated artist/title filenames
+Filename fallback trims padding underscores, converts multiple underscores to spaces, and collapses repeated whitespace. A single underscore can separate artist and title. It prefers a spaced dash, then accepts a single bare dash (for example Slade-Merry Xmas.mp3); ambiguous multiple bare dashes are left unsplit. For example, _King_Africa_-_La_Bomba.mp3 supplies Artist = King Africa and Title = La Bomba. The split is at the first spaced dash, preserving hyphens inside names such as AC-DC. Pending review entries with a missing artist and filename-like title receive the same suggestions without rescanning. Review persists them only on acceptance. Explicit manual Artist/Title decisions are preserved; no album or year is inferred from these filenames and source files are not renamed.
+
+Polish metadata encoding: legacy Latin-1/Windows-1252 tag text can be recovered as Windows-1250, ISO-8859-2 or UTF-8 when the full corrected value matches the actual filename or immediate folder. Artist, Album Artist, Album and Title suggestions are repaired during analysis and pending review, including album setup. Manual and online decisions are protected. Source tags and filenames are not rewritten; review suggestions are saved when accepted. Correct Unicode text and uncorroborated text are left unchanged.
+
+Review artist fallback: when a track artist is missing or invalid, review proposes the valid Album Artist unless it is a compilation label such as Various Artists or VA. The suggestion is displayed before acceptance; Enter (and F, which follows Enter decisions) saves it. Existing track artists and manual drafts are retained. Quitting or deferring does not save the suggestion.

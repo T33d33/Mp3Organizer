@@ -5,7 +5,7 @@ namespace Mp3Organizer;
 
 public sealed record IdentificationConfiguration(string ApiKey,string Contact,string? Fpcalc)
 {
-    public static IdentificationConfiguration Read() => new(Environment.GetEnvironmentVariable("ACOUSTID_API_KEY")??"",Environment.GetEnvironmentVariable("MP3ORGANIZER_CONTACT")??"",FindFpcalc(Environment.GetEnvironmentVariable("CHROMAPRINT_FPCALC"),Environment.GetEnvironmentVariable("PATH")??""));
+    public static IdentificationConfiguration Read() => new(SavedSettings.Read("ACOUSTID_API_KEY")??"",SavedSettings.Read("MP3ORGANIZER_CONTACT")??"",FindFpcalc(SavedSettings.Read("CHROMAPRINT_FPCALC"),Environment.GetEnvironmentVariable("PATH")??""));
     public static string? FindFpcalc(string? configured,string searchPath)
     {
         if(!string.IsNullOrWhiteSpace(configured))
@@ -22,10 +22,18 @@ public sealed record IdentificationConfiguration(string ApiKey,string Contact,st
             }
         return null;
     }
-    public string? Problem => string.IsNullOrWhiteSpace(ApiKey)?"AcoustID API key not configured (ACOUSTID_API_KEY)":
-        string.IsNullOrWhiteSpace(Contact)?"MusicBrainz contact not configured (MP3ORGANIZER_CONTACT)":
-        Contact.Any(char.IsControl)?"MusicBrainz contact contains invalid control characters":
-        Fpcalc==null?"fpcalc executable not found (CHROMAPRINT_FPCALC or PATH)":null;
+    public string? Problem
+    {
+        get
+        {
+            var problems=new List<string>();
+            if(string.IsNullOrWhiteSpace(ApiKey))problems.Add("AcoustID API key not configured (ACOUSTID_API_KEY)");
+            if(string.IsNullOrWhiteSpace(Contact))problems.Add("MusicBrainz contact not configured (MP3ORGANIZER_CONTACT)");
+            else if(Contact.Any(char.IsControl))problems.Add("MusicBrainz contact contains invalid control characters");
+            if(Fpcalc==null)problems.Add("fpcalc executable not found (CHROMAPRINT_FPCALC or PATH)");
+            return problems.Count==0?null:string.Join("; ",problems);
+        }
+    }
     public string Status(bool online,bool offline) => !online ? "Online lookup disabled: "+(offline?"--offline requested":"--online not specified (online lookup is opt-in)") :
         Problem is {} reason?"Online lookup disabled: "+reason:"Online lookup enabled";
 }

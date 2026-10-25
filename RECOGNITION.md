@@ -4,14 +4,14 @@ For normal use, start with **[scan + run](RUN.md)**. The analyze examples below 
 
 See [LLM observability](OBSERVABILITY.md) for actual HTTP-attempt messages, per-batch counters and persisted cumulative statistics.
 
-This extends the existing application, caches and `music-organizer.db`. Use the **artifacts-finish-folder** build. No real music library or live recognition service was accessed during implementation.
+This extends the existing application, caches and `music-organizer.db`. Use the **artifacts-review-artist-fallback** build. No real music library or live recognition service was accessed during implementation.
 
 ## Recommended quick start
 
 Run in PowerShell, replacing credentials and the model name with values for your accounts:
 
 ```powershell
-$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-finish-folder\Mp3Organizer.dll'
+$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-review-artist-fallback\Mp3Organizer.dll'
 $source = 'E:\Mp3-Ai-test'
 $workspace = 'E:\Mp3-Ai-test-workspace'
 $reports = 'E:\Mp3-Ai-test-reports'
@@ -120,7 +120,7 @@ After resolving, use the existing `plan`, `apply --dry-run`, `apply`, and `playl
 
 ## Verification
 
-Build with `./build-offline.ps1 -OutputDirectory artifacts-finish-folder`. Run the dependency-free test executable using `dotnet artifacts-finish-folder/Mp3Organizer.Tests.dll <scratch-folder>`. Tests mock OpenAI, AcoustID and MusicBrainz and generate synthetic WAV/MP3 data. Standard NuGet/MSBuild restore and a real provider/model inference remain unverified in this environment.
+Build with `./build-offline.ps1 -OutputDirectory artifacts-review-artist-fallback`. Run the dependency-free test executable using `dotnet artifacts-review-artist-fallback/Mp3Organizer.Tests.dll <scratch-folder>`. Tests mock OpenAI, AcoustID and MusicBrainz and generate synthetic WAV/MP3 data. Standard NuGet/MSBuild restore and a real provider/model inference remain unverified in this environment.
 
 
 
@@ -147,3 +147,5 @@ Target year repair also accepts already persisted verified MusicBrainz years: Mu
 Updated LLM failure policy: run and incremental analyze continue automatically when LLM configuration/authentication, quota, rate limiting, or other provider failures occur. After normal bounded provider retries, LLM fallback is disabled for the remainder of that invocation. AcoustID/MusicBrainz and deterministic identification continue. Ambiguous results become NeedsReview; Ready files proceed to organization. No restart, prompt, or --no-codex flag is required. A later invocation may attempt LLM again. This replaces the earlier stop/choice behavior.
 
 Standalone No is a legitimate value, not a placeholder. The NO placeholder prefix requires a metadata label such as title, artist, album or track. Case/punctuation-tolerant no title/no artist and generic Track/AudioTrack labels remain unreliable.
+
+Persistent setup: run Setup-Online.cmd once. It reuses existing values, prompts for missing required settings, and saves them in Windows user environment settings (not in the repository). Keys are hidden during input; Windows environment storage is not encrypted. The application reads process settings first, then saved Windows user/system settings, so an older terminal can use newly saved values without reopening. All missing required online settings are reported together. Optional OpenAI settings already present are preserved by setup. Review and organization behavior are unchanged.

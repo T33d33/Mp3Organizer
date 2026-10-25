@@ -1,6 +1,6 @@
 # Preserve original playlists after organization
 
-Use the current `artifacts-finish-folder/Mp3Organizer.dll` build (also selected by the main `.cmd` and `.ps1` launchers). Your workflow stays:
+Use the current `artifacts-review-artist-fallback/Mp3Organizer.dll` build (also selected by the main `.cmd` and `.ps1` launchers). Your workflow stays:
 
 ```powershell
 dotnet $dll scan 'E:\Mp3-Ai-test' --workspace 'E:\Mp3-Ai-test-workspace'

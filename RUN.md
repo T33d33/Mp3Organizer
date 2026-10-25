@@ -1,9 +1,9 @@
 # Normal workflow: scan, then run
 
-Use the current **artifacts-finish-folder** build. `scan` finds files; `run` performs pending analysis and then organized copying automatically. API configuration remains documented in [RECOGNITION.md](RECOGNITION.md). The lower-level commands remain available for diagnostics.
+Use the current **artifacts-review-artist-fallback** build. `scan` finds files; `run` performs pending analysis and then organized copying automatically. API configuration remains documented in [RECOGNITION.md](RECOGNITION.md). The lower-level commands remain available for diagnostics.
 
 ```powershell
-$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-finish-folder\Mp3Organizer.dll'
+$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-review-artist-fallback\Mp3Organizer.dll'
 $workspace = 'E:\Mp3-Ai-test-workspace'
 
 dotnet $dll scan 'E:\Mp3-Ai-test' --workspace $workspace
@@ -87,3 +87,7 @@ To inspect/simulate copying instead of executing it, retain the lower-level `ana
 
 
 
+
+Resume your test library by launching Resume-Processing.cmd. It uses the current build and saved Windows settings; no PowerShell variables are required. It resumes indexed work without resetting progress. Scan first when adding source files. Album corrections that merge managed filenames now allocate deterministic (2), (3), etc. suffixes, retain each existing audio file and source occurrence, and update canonical mappings and playlists through the existing recovery journal. Unmanaged destination collisions still stop safely. No audio is re-encoded and source files are untouched.
+
+After successful organization and playlist regeneration, run removes empty directories beneath normal artist folders, bottom-up, including leftover artist folders. This also runs when no audio needs copying. It preserves the organized root, reserved top-level dot/underscore folders, links, and every directory containing files (including hidden files). Deletion is nonrecursive and sources are untouched.

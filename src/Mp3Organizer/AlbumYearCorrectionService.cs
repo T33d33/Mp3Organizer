@@ -62,7 +62,23 @@ public sealed class AlbumYearCorrectionService(ProgressRepository repository,str
                 if(!desired.Equals(group.Key,StringComparison.OrdinalIgnoreCase))moves.Add(new(group.Key,desired,corrected));
             }
             if(moves.Count==0)return;
-            if(moves.Select(x=>x.NewPath).Distinct(StringComparer.OrdinalIgnoreCase).Count()!=moves.Count)throw new IOException("Album year correction has conflicting destinations.");
+            // Album decisions can merge directories whose filenames were unique only
+            // within their old albums. Keep both files using deterministic suffixes.
+            var reserved=new HashSet<string>(manifest.Keys,StringComparer.OrdinalIgnoreCase);
+            var requested=new HashSet<string>(moves.Select(x=>x.NewPath),StringComparer.OrdinalIgnoreCase);
+            moves=moves.OrderBy(x=>x.OldPath,StringComparer.OrdinalIgnoreCase).ToList();
+            for(var i=0;i<moves.Count;i++)
+            {
+                var move=moves[i];var chosen=move.NewPath;
+                if(reserved.Contains(chosen))
+                {
+                    var directory=Path.GetDirectoryName(chosen)!;var stem=Path.GetFileNameWithoutExtension(chosen);var extension=Path.GetExtension(chosen);var number=2;
+                    do {chosen=Path.Combine(directory,$"{stem} ({number++}){extension}");}
+                    while(reserved.Contains(chosen)||requested.Contains(chosen)||File.Exists(PathSafetyGuard.Destination(target,chosen,source))||Directory.Exists(PathSafetyGuard.Destination(target,chosen,source)));
+                    progress?.Invoke("Album correction preserves conflicting filename: "+move.OldPath+" -> "+chosen);
+                }
+                reserved.Add(chosen);moves[i]=move with{NewPath=chosen};
+            }
             foreach(var move in moves)
             {
                 Verify(move.OldPath,move.Metadata);

@@ -65,6 +65,7 @@ public sealed class RunPipelineService(ProgressRepository repository,string work
                 count++;progress?.Invoke("Processed: "+item.CurrentPath);
             }
             new FolderPlaylistService(repository).Regenerate(pair.Key,pair.Value,progress);
+            EmptyTargetFolders.Remove(pair.Key,pair.Value,progress);
         }
         return count;
     }

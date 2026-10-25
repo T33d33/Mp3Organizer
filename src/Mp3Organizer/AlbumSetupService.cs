@@ -6,7 +6,22 @@ public sealed class AlbumSetupService(ProgressRepository repository,string works
     {
         var folder=Path.GetDirectoryName(item.CurrentPath)!;var members=Members(folder);
         var store=new ManualResolutionStore(workspace,item.SourceRoot);var data=store.Load();
+        if(data.Files.TryGetValue("sha256:"+item.Basic.Sha256.ToLowerInvariant(),out var candidate)&&candidate.CandidateReviewFileIds?.Contains(item.Id)==true)return true;
         var scoped=data.Folders.FirstOrDefault(x=>x.Value.AlbumSetupConfirmed&&x.Value.ReviewFileIds?.Contains(item.Id)==true);
+        if(scoped.Value!=null&&!scoped.Value.LastKnownPath.Equals(folder,StringComparison.OrdinalIgnoreCase))
+        {
+            var direct=repository.All().Where(x=>Path.GetDirectoryName(x.CurrentPath)!.Equals(folder,StringComparison.OrdinalIgnoreCase)&&x.SourceRoot.Equals(item.SourceRoot,StringComparison.OrdinalIgnoreCase)).ToList();
+            var proposal=SupportedAlbum(direct);
+            if(proposal is {} album&&(MetadataNormalizer.Key(album.Album)!=MetadataNormalizer.Key(scoped.Value.Album)||MetadataNormalizer.Key(album.AlbumArtist)!=MetadataNormalizer.Key(scoped.Value.AlbumArtist)||album.Year!=scoped.Value.Year))
+            {
+                console.Write($"IDENTIFIED ALBUM — candidates agree within this folder.\nAlbum Artist: {album.AlbumArtist}\nAlbum: {album.Album}\nYear: {album.Year}\nReplace the inherited parent album context for these {direct.Count} files only, including already reviewed files. No child folders are included. Track Artist, Title and Track number remain unchanged; tracks without candidates still need individual review.\nEnter = confirm album | /q = stop without changes\n\n\nFolder: {folder}\nConfirm identified album:");
+                var answer=console.Read()?.Trim();
+                if(answer!=""&&!string.Equals(answer,"YES",StringComparison.OrdinalIgnoreCase))return false;
+                var own=data.Folders.FirstOrDefault(x=>x.Value.LastKnownPath.Equals(folder,StringComparison.OrdinalIgnoreCase));
+                var decision=new ManualOverride{LastKnownPath=folder,AlbumSetupConfirmed=true,ReviewFileIds=direct.Where(x=>!data.Files.Values.Any(v=>v.CandidateReviewFileIds?.Contains(x.Id)==true)).Select(x=>x.Id).ToArray(),Album=album.Album,AlbumArtist=album.AlbumArtist,Year=album.Year};
+                var ownKey=own.Key??"folder:"+Guid.NewGuid().ToString("N");data.Folders[ownKey]=decision;RemoveOverlap(data,ownKey,decision.ReviewFileIds);store.Save(data);Apply(folder,decision);return true;
+            }
+        }
         if(scoped.Value!=null){Apply(scoped.Value.LastKnownPath,scoped.Value);return true;}
         var legacy=data.Folders.Where(x=>x.Value.AlbumSetupConfirmed&&x.Value.ReviewFileIds==null&&PathSafetyGuard.Within(item.CurrentPath,x.Value.LastKnownPath)).OrderByDescending(x=>x.Value.LastKnownPath.Length).FirstOrDefault();
         if(legacy.Value!=null)
@@ -19,7 +34,7 @@ public sealed class AlbumSetupService(ProgressRepository repository,string works
         var existing=data.Folders.FirstOrDefault(x=>x.Value.LastKnownPath.Equals(folder,StringComparison.OrdinalIgnoreCase));
         if(existing.Value?.ReviewFileIds!=null)members=members.Where(x=>!existing.Value.ReviewFileIds.Contains(x.Id)).ToList();
         if(members.All(x=>!MetadataQualityEvaluator.Invalid(x.Effective.Album)&&!MetadataQualityEvaluator.Invalid(x.Effective.AlbumArtist)&&x.Effective.Year>=1000))return true;
-        string Common(Func<AudioMetadata,string> get){var values=members.Select(x=>get(x.Effective)).Where(x=>!MetadataQualityEvaluator.Invalid(x)).GroupBy(MetadataNormalizer.Key).ToArray();return values.Length==1?values[0].First():"";}
+        string Common(Func<AudioMetadata,string> get){var values=members.Select(x=>get(FilenameEncodingRepair.Apply(x.Effective))).Where(x=>!MetadataQualityEvaluator.Invalid(x)).GroupBy(MetadataNormalizer.Key).ToArray();return values.Length==1?values[0].First():"";}
         var albumArtist=Common(x=>x.AlbumArtist);var provisional=false;
         if(albumArtist==""){albumArtist=Common(x=>x.Artist);provisional=albumArtist!="";}
         var years=members.Select(x=>x.Effective.Year).Where(x=>x>=1000).Distinct().ToArray();
@@ -48,6 +63,26 @@ public sealed class AlbumSetupService(ProgressRepository repository,string works
     private static void RemoveOverlap(ManualResolutions data,string key,string[] ids)
     {
         foreach(var other in data.Folders.Keys.Where(x=>x!=key).ToList())if(data.Folders[other].ReviewFileIds is {} prior)data.Folders[other]=data.Folders[other] with{ReviewFileIds=prior.Except(ids).ToArray()};
+    }
+    public static TagMetadata? SupportedAlbum(IReadOnlyList<IndexedMusic> members)
+    {
+        if(members.Count<2)return null;
+        var evidence=new List<TagMetadata>();
+        foreach(var member in members)
+        {
+            var candidates=member.Effective.Identification?.Candidates??[];
+            var albums=candidates.Select(x=>x.Metadata).Where(x=>!MetadataQualityEvaluator.Invalid(x.Album)&&!MetadataQualityEvaluator.Invalid(x.AlbumArtist)&&x.Year>=1000)
+                .GroupBy(x=>(MetadataNormalizer.Key(x.Album),MetadataNormalizer.Key(x.AlbumArtist),x.Year)).ToList();
+            if(albums.Count>1)return null;
+            if(albums.Count==1)evidence.Add(albums[0].First());
+        }
+        if(evidence.Count<2||evidence.Count*5<members.Count*4)return null;
+        var first=evidence[0];
+        if(evidence.Any(x=>MetadataNormalizer.Key(x.Album)!=MetadataNormalizer.Key(first.Album)||MetadataNormalizer.Key(x.AlbumArtist)!=MetadataNormalizer.Key(first.AlbumArtist)||x.Year!=first.Year))return null;
+        // Missing-candidate tracks cannot establish album identity by their folder name.
+        // For a single-artist proposal they must at least agree on the track artist.
+        if(!ReviewService.CompilationAlbumArtist(first.AlbumArtist)&&members.Any(x=>MetadataNormalizer.Key(x.Effective.Artist)!=MetadataNormalizer.Key(first.AlbumArtist)))return null;
+        return first;
     }
     private List<IndexedMusic> Members(string folder)=>repository.All().Where(x=>PathSafetyGuard.Within(x.CurrentPath,folder)).ToList();
     private List<IndexedMusic> Selected(ManualOverride decision)=>repository.All().Where(x=>decision.ReviewFileIds?.Contains(x.Id)==true).ToList();
