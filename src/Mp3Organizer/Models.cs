@@ -54,6 +54,7 @@ public sealed class PlaylistMap
 public sealed class CopyPlan
 {
     public bool SelectedInventoryOnly {get;set;}
+    public bool KeepSourceFolders {get;set;}
     public string ProgressWorkspace {get;set;}="";
     public int MetadataPolicyVersion {get;set;}
     public int SchemaVersion { get; set; } = 1;

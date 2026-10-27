@@ -1,6 +1,6 @@
 # Folder playlists and metadata policy migration
 
-Use `artifacts-review-artist-fallback/Mp3Organizer.dll`. The normal workflow remains:
+Use `artifacts-output-validation/Mp3Organizer.dll`. The normal workflow remains:
 
 ```powershell
 dotnet $dll scan 'E:\Mp3-Ai-test' --workspace 'E:\Mp3-Ai-test-workspace'

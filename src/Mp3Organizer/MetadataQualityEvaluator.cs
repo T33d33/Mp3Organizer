@@ -8,6 +8,7 @@ public sealed class MetadataQualityEvaluator
 
     public static bool Invalid(string value) => string.IsNullOrWhiteSpace(value) || MetadataPlaceholderDetector.IsPlaceholder(value) || MetadataPlaceholderDetector.IsGenericTitle(value)
         || value.Any(char.IsControl) || value.Length > 300 || Regex.IsMatch(value, @"(?i)(upped\s*by|uploaded\s*by|https?://|www\.|\b\d{2,4}\s*kbps\b)");
+    public static bool InvalidAlbum(string value) => Invalid(value) && !Regex.IsMatch(value, @"^\d+(?:[ ,.\-–—:]\d+)*$");
     public static bool FilenameTitle(AudioMetadata file) => AudioFileScanner.Extensions.Contains(Path.GetExtension(file.Title)) || MetadataPlaceholderDetector.IsGenericTitle(file.Title)
         || MetadataNormalizer.Key(file.Title)==MetadataNormalizer.Key(Path.GetFileNameWithoutExtension(file.FileName)) && FilenameTrackParser.Parse(file.FileName) is { Title.Length: >0 };
     public List<string> Evaluate(AudioMetadata file, IReadOnlyList<AudioMetadata> neighbors)
@@ -15,7 +16,7 @@ public sealed class MetadataQualityEvaluator
         var reasons = new List<string>();
         if (Invalid(file.Artist)) reasons.Add(MetadataPlaceholderDetector.IsPlaceholder(file.Artist) ? "PlaceholderArtist" : "Artist missing, generic, or malformed");
         if (Invalid(file.Title) || FilenameTitle(file)) reasons.Add(MetadataPlaceholderDetector.IsGenericTitle(file.Title) && !string.IsNullOrWhiteSpace(file.Title) ? "GenericTrackTitle" : "Title missing, malformed, or filename-like");
-        if (Invalid(file.Album)) reasons.Add(MetadataPlaceholderDetector.IsPlaceholder(file.Album) ? "PlaceholderAlbum" : "Album missing or malformed");
+        if (InvalidAlbum(file.Album)) reasons.Add(MetadataPlaceholderDetector.IsPlaceholder(file.Album) ? "PlaceholderAlbum" : "Album missing or malformed");
         if (!string.IsNullOrWhiteSpace(file.AlbumArtist) && Invalid(file.AlbumArtist)) reasons.Add("Album artist malformed");
         return reasons;
     }
@@ -39,7 +40,7 @@ public sealed class FilenameMetadataFallback
         var normalizedName=Normalize(normalizedStemInput)+Path.GetExtension(file.FileName);
         var normalizedStem=Path.GetFileNameWithoutExtension(normalizedName);
         var artist = MetadataQualityEvaluator.Invalid(file.Artist) ? "" : file.Artist;
-        var album = MetadataQualityEvaluator.Invalid(file.Album) ? "" : file.Album;
+        var album = MetadataQualityEvaluator.InvalidAlbum(file.Album) ? "" : file.Album;
         var title = file.Title; var track = file.Track;
         var filenameHint=FilenameTrackParser.Parse(normalizedName);
         if(track==0&&filenameHint!=null)track=filenameHint.Number;
@@ -53,7 +54,7 @@ public sealed class FilenameMetadataFallback
             if (names.Length == 2 && artist == ""&&!MetadataQualityEvaluator.Invalid(names[0])&&!MetadataQualityEvaluator.Invalid(names[1])) { artist = names[0]; title = names[1]; }
         }
         if (MetadataQualityEvaluator.Invalid(artist)) artist = "";
-        if (MetadataQualityEvaluator.Invalid(album)) album = "";
+        if (MetadataQualityEvaluator.InvalidAlbum(album)) album = "";
         return file with { Artist = artist, TrackArtists = artist == file.Artist ? file.TrackArtists : artist == "" ? [] : [artist], AlbumArtist = MetadataQualityEvaluator.Invalid(file.AlbumArtist) ? "" : file.AlbumArtist, Album = album, Title = title, Track = track };
     }
 }

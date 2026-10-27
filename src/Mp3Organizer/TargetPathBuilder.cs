@@ -12,7 +12,7 @@ public static class TargetPathBuilder
     public static string SafeName(string value)
     {
         var chars = value.Select(c => c < 32 || "<>:\"/\\|?*".Contains(c) ? '_' : c).ToArray();
-        var name = new string(chars).Trim().TrimEnd('.');
+        var name = Regex.Replace(new string(chars), @"\s+", " ").Trim().TrimEnd('.');
         if (name.Length == 0) name = "Unknown";
         if (Regex.IsMatch(name, @"^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)", RegexOptions.IgnoreCase)) name = "_" + name;
         // Do not truncate: collisions and overlong names must remain visible to planning.

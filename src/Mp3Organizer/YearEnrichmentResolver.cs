@@ -13,7 +13,7 @@ public sealed class YearEnrichmentResolver(IMetadataResolver inner,IAlbumYearCli
         // Do not present a later edition date as an original album year.
         if(row.Year>0)row=row with{Year=0,Date=""};
         var artist=MetadataQualityEvaluator.Invalid(row.AlbumArtist)?row.Artist:row.AlbumArtist;
-        if(MetadataQualityEvaluator.Invalid(artist)||MetadataQualityEvaluator.Invalid(row.Album))return Review(row,e,"UnknownYear","Album identity incomplete; no reliable year lookup.");
+        if(MetadataQualityEvaluator.Invalid(artist)||MetadataQualityEvaluator.InvalidAlbum(row.Album))return Review(row,e,"UnknownYear","Album identity incomplete; no reliable year lookup.");
         progress?.Invoke("MusicBrainz: original album year or cache");
         AlbumYearLookup lookup;
         try{lookup=await albums.LookupAsync(artist,row.Album,online,ct);}

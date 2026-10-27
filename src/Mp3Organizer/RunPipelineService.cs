@@ -14,6 +14,7 @@ public sealed class RunPipelineService(ProgressRepository repository,string work
         {
             foreach(var root in roots)PathSafetyGuard.Separate(root,pair.Value);
             PathSafetyGuard.Separate(workspace,pair.Value);ManagedTarget.Check(pair.Value,pair.Key);
+            var state=ManagedTarget.Check(pair.Value,pair.Key);if(state!=null&&state.KeepSourceFolders!=OutputLayout.KeepFolders(workspace))throw new IOException("Output layout differs from existing target. Use a fresh workspace/output.");
             var old=repository.GetRunTarget(pair.Key);
             if(old!=null&&!old.Equals(pair.Value,StringComparison.OrdinalIgnoreCase)&&repository.All().Any(x=>x.SourceRoot==pair.Key&&x.Status==ProcessingStatus.Processed))throw new IOException("Cannot switch target while this source has Processed files. Use a separate workspace for a different target.");
         }
@@ -59,7 +60,7 @@ public sealed class RunPipelineService(ProgressRepository repository,string work
             {
                 // SHA-identical duplicates are fulfilled by the selected, verified target copy.
                 if(!handled.Contains(item.Basic.Sha256))continue;
-                var operation=plan.Operations.First(x=>x.Metadata.Sha256==item.Basic.Sha256);
+                var operation=plan.KeepSourceFolders?plan.Operations.Single(x=>x.Metadata.FullPath.Equals(item.CurrentPath,StringComparison.OrdinalIgnoreCase)):plan.Operations.First(x=>x.Metadata.Sha256==item.Basic.Sha256);
                 repository.MapCanonical(item,pair.Value,operation.RelativePath,operation.Metadata);
                 repository.Save(item with{Status=ProcessingStatus.Processed,LastProcessedUtc=DateTime.UtcNow.ToString("O"),ErrorMessage=""},"Run applied validated plan "+plan.PlanId);
                 count++;progress?.Invoke("Processed: "+item.CurrentPath);

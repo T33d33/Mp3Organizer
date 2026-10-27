@@ -8,13 +8,13 @@ public sealed class FolderAlbumEditor(ProgressRepository repository,string works
         var members=repository.All().Where(x=>x.SourceRoot.Equals(current.SourceRoot,StringComparison.OrdinalIgnoreCase)&&Path.GetDirectoryName(x.CurrentPath)!.Equals(folder,StringComparison.OrdinalIgnoreCase)&&x.Status is ProcessingStatus.NeedsReview or ProcessingStatus.Ready or ProcessingStatus.Processed).ToList();
         var context=new AlbumSetupService(repository,workspace,console).Context(current);
         var local=context?.LastKnownPath.Equals(folder,StringComparison.OrdinalIgnoreCase)==true;
-        string Common(Func<IndexedMusic,string> get)
+        string Common(Func<IndexedMusic,string> get,bool album=false)
         {
-            var values=members.Select(get).Where(x=>!MetadataQualityEvaluator.Invalid(x)).GroupBy(MetadataNormalizer.Key).ToList();return values.Count==1?values[0].First():"";
+            var values=members.Select(get).Where(x=>!(album?MetadataQualityEvaluator.InvalidAlbum(x):MetadataQualityEvaluator.Invalid(x))).GroupBy(MetadataNormalizer.Key).ToList();return values.Count==1?values[0].First():"";
         }
         var artist=Common(x=>x.Basic.AlbumArtist);if(artist=="")artist=Common(x=>x.Effective.Artist);
         var years=members.Select(x=>x.Basic.Year).Where(x=>x>=1000&&x<=9999).Distinct().ToArray();
-        var values=new[]{local?context!.AlbumArtist??"":artist,local?context!.Album??"":Common(x=>x.Basic.Album),local?(context!.Year is >0?context.Year.ToString()!:""):years.Length==1?years[0].ToString():""};
+        var values=new[]{local?context!.AlbumArtist??"":artist,local?context!.Album??"":Common(x=>x.Basic.Album,true),local?(context!.Year is >0?context.Year.ToString()!:""):years.Length==1?years[0].ToString():""};
         var names=new[]{"Album Artist","Album","Year (optional)"};
         console.Write("EDIT ALBUM FOR THIS FOLDER — Enter keeps the suggestion; text replaces it. /clear = clear | /back = previous | /cancel = return without saving | /q = stop review. No changes until confirmation.");
         for(var field=0;;)

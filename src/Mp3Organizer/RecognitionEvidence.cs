@@ -18,7 +18,7 @@ public static class RecognitionScorer
             ["Title"]=Same(fallback.Title,recording.Title)*.08,
             ["Album"]=release==null?0:Same(fallback.Album,release.Album)*.06,
             ["Track"]=release!=null&&fallback.Track>0&&fallback.Track==release.Track?.03:0,
-            ["Folder"]=release!=null&&!MetadataQualityEvaluator.Invalid(release.Album)&&MetadataNormalizer.Key(folder).Contains(MetadataNormalizer.Key(release.Album),StringComparison.Ordinal)?.025:0,
+            ["Folder"]=release!=null&&!MetadataQualityEvaluator.InvalidAlbum(release.Album)&&MetadataNormalizer.Key(folder).Contains(MetadataNormalizer.Key(release.Album),StringComparison.Ordinal)?.025:0,
             ["Neighbors"]=0
         };
         var year=release?.OriginalYear??0;

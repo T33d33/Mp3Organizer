@@ -34,7 +34,7 @@ public sealed class ManualMetadataResolver(IMetadataResolver inner,ManualResolut
             }
             else specific=specific with{Album=null,AlbumArtist=null,Year=null};
         }
-        if(folder?.AlbumSetupConfirmed==true&&folder.ReviewFileIds==null)folder=folder with{Album=MetadataQualityEvaluator.Invalid(file.Album)?folder.Album:null,AlbumArtist=MetadataQualityEvaluator.Invalid(file.AlbumArtist)?folder.AlbumArtist:null,Year=file.Year==0?folder.Year:null};
+        if(folder?.AlbumSetupConfirmed==true&&folder.ReviewFileIds==null)folder=folder with{Album=MetadataQualityEvaluator.InvalidAlbum(file.Album)?folder.Album:null,AlbumArtist=MetadataQualityEvaluator.Invalid(file.AlbumArtist)?folder.AlbumArtist:null,Year=file.Year==0?folder.Year:null};
         if(folder?.ReviewFileIds!=null&&specific!=null)specific=specific with{Album=folder.Album,AlbumArtist=folder.AlbumArtist,Year=folder.Year};
         var merged=Apply(Apply(file,folder),specific);
         var hasManual=HasFields(folder)||HasFields(specific);
@@ -67,8 +67,18 @@ public sealed class ManualMetadataResolver(IMetadataResolver inner,ManualResolut
         Album=value.Album??row.Album,Title=value.Title??row.Title,Track=value.TrackNumber??row.Track,Disc=value.DiscNumber??row.Disc,Year=value.Year??row.Year,
         Date=value.Year.HasValue?value.Year.Value.ToString(System.Globalization.CultureInfo.InvariantCulture):row.Date
     };
-    public static bool ConfirmedNumericTitle(string title)=>System.Text.RegularExpressions.Regex.IsMatch(title,@"^\d+(?:[,.]\d+)*$");
-    public static bool NeedsInput(AudioMetadata row,string? manualTitle=null)=>MetadataQualityEvaluator.Invalid(row.Artist)||(!(row.ConfirmedLooseTrack&&string.IsNullOrWhiteSpace(row.Album))&&MetadataQualityEvaluator.Invalid(row.Album))||((MetadataQualityEvaluator.Invalid(row.Title)||MetadataQualityEvaluator.FilenameTitle(row))&&!((manualTitle==row.Title||row.Identification?.FieldSources.GetValueOrDefault("Title") is "FileManualOverride" or "FolderManualOverride")&&ConfirmedNumericTitle(row.Title)))||row.Track==0&&!(row.ConfirmedLooseTrack&&string.IsNullOrWhiteSpace(row.Album));
+    public static bool ConfirmedNumericTitle(string title)=>System.Text.RegularExpressions.Regex.IsMatch(title,@"^\d+(?:[,.\-–—:]\d+)*$");
+    public static bool NeedsInput(AudioMetadata row,string? manualTitle=null)=>IncompleteFields(row,manualTitle).Count>0;
+    public static List<string> IncompleteFields(AudioMetadata row,string? manualTitle=null)
+    {
+        var fields=new List<string>();
+        var loose=row.ConfirmedLooseTrack&&string.IsNullOrWhiteSpace(row.Album);
+        if(MetadataQualityEvaluator.Invalid(row.Artist))fields.Add("Artist");
+        if(!loose&&MetadataQualityEvaluator.InvalidAlbum(row.Album))fields.Add("Album");
+        if((MetadataQualityEvaluator.Invalid(row.Title)||MetadataQualityEvaluator.FilenameTitle(row))&&!((manualTitle==row.Title||row.Identification?.FieldSources.GetValueOrDefault("Title") is "FileManualOverride" or "FolderManualOverride")&&ConfirmedNumericTitle(row.Title)))fields.Add("Title");
+        if(row.Track==0&&!loose)fields.Add("Track number");
+        return fields;
+    }
     public static KeyValuePair<string,ManualOverride> FindFolder(ManualResolutions data,string path,IReadOnlyList<AudioMetadata> members,IReadOnlyList<AudioMetadata>? inventory=null)
     {
         var exact=data.Folders.FirstOrDefault(x=>string.Equals(PathSafetyGuard.Canonical(x.Value.LastKnownPath),PathSafetyGuard.Canonical(path),StringComparison.OrdinalIgnoreCase));

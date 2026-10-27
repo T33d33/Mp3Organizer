@@ -6,9 +6,12 @@ public sealed class CopyPlanBuilder
     {
         source = PathSafetyGuard.Canonical(source); target = PathSafetyGuard.Canonical(target);
         PathSafetyGuard.Separate(source, target);
-        ManagedTarget.Check(target, source);
+        var keepFolders=OutputLayout.KeepFolders(workspace);
+        var existingState=ManagedTarget.Check(target, source);
+        if(existingState!=null&&existingState.KeepSourceFolders!=keepFolders)throw new IOException("Target uses a different output layout. Use a fresh matching workspace and target.");
         var plan = new CopyPlan { MetadataPolicyVersion=2,Source = source, Target = target, ExpectedTargetSnapshot = TargetSnapshot.Hash(target),SelectedInventoryOnly=readyInventory!=null,ProgressWorkspace=workspace!=null&&File.Exists(Path.Combine(workspace,"music-organizer.db"))?workspace:"" };
         var scanner = new AudioFileScanner();
+        plan.KeepSourceFolders=keepFolders;
         var reader = new TagLibMetadataReader(new ReadOnlySource());
         progress?.Invoke("Scanning source and reading metadata/SHA-256...");
         var inventory = readyInventory?.OrderBy(x=>x.FullPath,StringComparer.OrdinalIgnoreCase).ToList()??scanner.Scan(source).Select(path=>{progress?.Invoke("Reading: "+Path.GetFileName(path));return reader.Read(path);}).ToList();
@@ -24,6 +27,7 @@ public sealed class CopyPlanBuilder
         }
         var selection = new DuplicateDetector(new Sha256EquivalenceVerifier()).Select(inventory.Where(x => x.Error == ""&&x.Identification?.Status!="Review"&&!blocked.Contains(x.FullPath)).ToList());
         plan.Duplicates = selection.Decisions;
+        if(keepFolders){selection=(inventory.Where(x=>x.Error==""&&x.Identification?.Status!="Review"&&!blocked.Contains(x.FullPath)).ToList(),new List<DuplicateDecision>());plan.Duplicates=selection.Decisions;}
         var existing = Directory.Exists(target) ? scanner.Scan(target).Select(reader.Read).ToList() : new List<AudioMetadata>();
         plan.Conflicts.AddRange(scanner.Errors);
         plan.Conflicts.AddRange(existing.Where(x => x.Error != "").Select(x => "Target metadata read failed: " + x.FullPath));
@@ -34,13 +38,15 @@ public sealed class CopyPlanBuilder
         foreach (var row in selection.Selected)
         {
             var canonical=existing.Where(x=>x.Sha256==row.Sha256&&x.Size==row.Size&&row.Sha256.Length==64).OrderBy(x=>x.FullPath,StringComparer.OrdinalIgnoreCase).FirstOrDefault();
-            if(canonical!=null)
+            if(canonical!=null&&!keepFolders)
             {
                 var sharedPath=Path.GetRelativePath(target,canonical.FullPath);
                 plan.Operations.Add(new(row,sharedPath,"AlreadyPresent"));occupied.Add(sharedPath);
                 continue;
             }
-            var relative = TargetPathBuilder.Build(row);
+            var relative = keepFolders?Path.GetRelativePath(source,row.FullPath):TargetPathBuilder.Build(row);
+            if(keepFolders&&(relative.Split(Path.DirectorySeparatorChar)[0].Equals("_Playlists",StringComparison.OrdinalIgnoreCase)||relative.Split(Path.DirectorySeparatorChar)[0].Equals("_Playlist-Folder",StringComparison.OrdinalIgnoreCase)||relative.Split(Path.DirectorySeparatorChar)[0].StartsWith(".mp3organizer",StringComparison.OrdinalIgnoreCase)))throw new IOException("Source folder collides with reserved output paths: "+relative);
+            if(keepFolders&&File.Exists(Path.Combine(target,relative))&&(!tracks.TryGetValue(relative,out var original)||original.Metadata.Sha256!=row.Sha256))throw new IOException("Original path already contains different audio: "+relative);
             var initial = relative;
             var suffix = 1;
             while (occupied.Contains(relative) || Directory.Exists(Path.Combine(target, relative)) || (File.Exists(Path.Combine(target, relative)) && (!tracks.TryGetValue(relative, out var found) || found.Metadata.Sha256 != row.Sha256)))
@@ -67,7 +73,7 @@ public sealed class CopyPlanBuilder
         return plan;
     }
 }
-public sealed record ManagedTargetState(int SchemaVersion, string Source, List<string> Playlists, bool IndexManaged = false, bool MetadataManaged = false);
+public sealed record ManagedTargetState(int SchemaVersion, string Source, List<string> Playlists, bool IndexManaged = false, bool MetadataManaged = false,bool KeepSourceFolders=false);
 public static class ManagedTarget
 {
     public const string Marker = ".mp3organizer.json";

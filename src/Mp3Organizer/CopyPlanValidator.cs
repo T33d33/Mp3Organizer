@@ -14,7 +14,9 @@ public sealed class CopyPlanValidator
             var manual=new ManualResolutionStore(Path.GetDirectoryName(plan.ManualFilePath)!,source,target);
             if(!string.Equals(manual.FilePath,plan.ManualFilePath,StringComparison.OrdinalIgnoreCase)||manual.Revision()!=plan.ManualFileRevision)throw new IOException("Manual resolutions changed since planning; create a new plan.");
         }
-        ManagedTarget.Check(target, source);
+        var layoutState=ManagedTarget.Check(target, source);
+        if(layoutState!=null&&layoutState.KeepSourceFolders!=plan.KeepSourceFolders)throw new IOException("Plan output layout differs from target.");
+        if(plan.ProgressWorkspace!=""&&OutputLayout.KeepFolders(plan.ProgressWorkspace)!=plan.KeepSourceFolders)throw new IOException("Output layout changed since planning.");
         if (plan.Conflicts.Count != 0) throw new IOException("Plan has blocking conflicts; inspect conflicts.csv and create a new plan.");
         if (TargetSnapshot.Hash(target) != plan.ExpectedTargetSnapshot) throw new IOException("Target changed since planning. Create a new plan.");
         PlaylistMapStore.Validate(plan.PlaylistMap);

@@ -95,9 +95,9 @@ public sealed class MetadataResolver(IAudioFingerprintService fingerprints, IAco
         file=new FilenameMetadataFallback().Resolve(file);
         var expectedYear = file.Year;
         var editions=releases.GroupBy(x=>x.GroupId!=""&&x.OriginalYear>0?$"{x.GroupId}|{x.Track}|{x.Disc}|{x.OriginalYear}|{MetadataNormalizer.Key(x.Album)}|{MetadataNormalizer.Key(x.AlbumArtist)}":x.Id).Select(g=>g.OrderBy(x=>x.Year).First());
-        var ranked = editions.Where(x => x.Status == "Official" && !MetadataQualityEvaluator.Invalid(x.Album)).Select(x =>
+        var ranked = editions.Where(x => x.Status == "Official" && !MetadataQualityEvaluator.InvalidAlbum(x.Album)).Select(x =>
         {
-            var tagMatch = !MetadataQualityEvaluator.Invalid(file.Album) && MetadataNormalizer.Key(x.Album) == MetadataNormalizer.Key(file.Album);
+            var tagMatch = !MetadataQualityEvaluator.InvalidAlbum(file.Album) && MetadataNormalizer.Key(x.Album) == MetadataNormalizer.Key(file.Album);
 
             var score = tagMatch ? 5 : 0;
             if (!tagMatch) return (Release: x, Score: -100);

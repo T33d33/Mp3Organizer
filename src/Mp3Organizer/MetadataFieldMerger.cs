@@ -12,7 +12,7 @@ public static class MetadataFieldMerger
             if(name=="Title"&&filenameSuggestion.Title!=tags.Title){sources[name]="FilenameFallback";return filenameSuggestion.Title;}
             if(name=="Title"&&FilenameEncodingRepair.Title(tags) is {} repaired){sources[name]="FilenameEncodingRepair";return repaired;}
             if(FilenameEncodingRepair.Field(tags,name,original) is {} fixedText){sources[name]="FilenameEncodingRepair";return fixedText;}
-            bool Valid(string? value)=>!string.IsNullOrWhiteSpace(value)&&!MetadataQualityEvaluator.Invalid(value)&&(name!="Title"||!MetadataQualityEvaluator.FilenameTitle(tags with{Title=value}));
+            bool Valid(string? value)=>!string.IsNullOrWhiteSpace(value)&&!(name=="Album"?MetadataQualityEvaluator.InvalidAlbum(value):MetadataQualityEvaluator.Invalid(value))&&(name!="Title"||!MetadataQualityEvaluator.FilenameTitle(tags with{Title=value}));
             if(Valid(original)){sources[name]="Tags";return original;}
             if(Valid(online)){sources[name]="AcoustIdMusicBrainz";return online!;}
             if(Valid(lower)){sources[name]="FilenameFallback";return lower;}

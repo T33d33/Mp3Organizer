@@ -94,7 +94,7 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
                         selectedCandidate=true;
                         var c=candidates[number-1].Metadata;
                         string Keep(string higher,string lower)=>MetadataQualityEvaluator.Invalid(higher)?lower:higher;
-                        selected=new(Keep(c.Artist,row.Artist),Keep(c.AlbumArtist,row.AlbumArtist),Keep(c.Album,row.Album),Keep(c.Title,row.Title),c.Track>0?c.Track:row.Track,c.Disc>0?c.Disc:row.Disc,c.Year>0?c.Year:row.Year);
+                        selected=new(Keep(c.Artist,row.Artist),Keep(c.AlbumArtist,row.AlbumArtist),MetadataQualityEvaluator.InvalidAlbum(c.Album)?row.Album:c.Album,Keep(c.Title,row.Title),c.Track>0?c.Track:row.Track,c.Disc>0?c.Disc:row.Disc,c.Year>0?c.Year:row.Year);
                     }
                 }
                 if(!selectedCandidate&&albumFirst&&new AlbumSetupService(repository,workspace,console).Context(item) is {} context)
@@ -132,12 +132,12 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
                 }
                 data.Files[key]=value;store.Save(data);
                 var updated=ManualMetadataResolver.Apply(row,value);if(albumFirst&&new AlbumSetupService(repository,workspace,console).Context(item) is {} savedContext)updated=updated with{Album=savedContext.Album??updated.Album,AlbumArtist=savedContext.AlbumArtist??updated.AlbumArtist,Year=savedContext.Year??updated.Year};var evidence=row.Identification??new();var needs=ManualMetadataResolver.NeedsInput(updated,selected.Title);
-                updated=updated with{Identification=evidence with{MetadataPolicyVersion=2,Status=needs?"Review":"ManualResolved",ManualOverrideHit=true,Source=MetadataSource.FileManualOverride,RecognitionMethod="Manual",ReviewReasons=needs?["ManualMetadataIncomplete"]:[],ReviewReason=needs?"Manually cleared or incomplete required fields.":"",FieldSources=MetadataFieldMerger.ManualSources(evidence,null,value)}};
+                updated=updated with{Identification=evidence with{MetadataPolicyVersion=2,Status=needs?"Review":"ManualResolved",ManualOverrideHit=true,Source=MetadataSource.FileManualOverride,RecognitionMethod="Manual",ReviewReasons=needs?["ManualMetadataIncomplete"]:[],ReviewReason=needs?"Missing or invalid: "+string.Join(", ",ManualMetadataResolver.IncompleteFields(updated,selected.Title)):"",FieldSources=MetadataFieldMerger.ManualSources(evidence,null,value)}};
                 var accepted=item with{Effective=updated,Status=needs?ProcessingStatus.NeedsReview:ProcessingStatus.Ready,ErrorMessage="",LastProcessedUtc=DateTime.UtcNow.ToString("O")};
                 if(tags!=null&&!needs)tags.WriteAndSave(accepted,true);else repository.Save(accepted,"Explicit review confirmation; track metadata saved");
                 if(albumDecision)new AlbumYearCorrectionService(repository,workspace).Propagate();
                 if(albumFirst)new AlbumSetupService(repository,workspace,console).ReconcileArtist(accepted);
-                reviewed.Add(item.Id);console.Write(needs?"Saved; incomplete fields remain NeedsReview.":"Saved; Ready.");break;
+                reviewed.Add(item.Id);console.Write(needs?"Saved; NeedsReview — missing or invalid: "+string.Join(", ",ManualMetadataResolver.IncompleteFields(updated,selected.Title))+".":"Saved; Ready.");break;
             }
         }
         return ManuallyReviewedCount;

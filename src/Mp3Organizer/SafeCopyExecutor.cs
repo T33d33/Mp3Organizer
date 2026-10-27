@@ -14,7 +14,7 @@ public sealed class SafeCopyExecutor
         var old = ManagedTarget.Check(target, source);
         if (old == null)
         {
-            new M3u8Writer().WriteNew(Path.Combine(target, ManagedTarget.Marker), JsonFormat.Serialize(new ManagedTargetState(1, source, new())), source);
+            new M3u8Writer().WriteNew(Path.Combine(target, ManagedTarget.Marker), JsonFormat.Serialize(new ManagedTargetState(1, source, new(),KeepSourceFolders:plan.KeepSourceFolders)), source);
             new M3u8Writer().WriteNew(Path.Combine(target, "playlist-map.json"), JsonFormat.Serialize(plan.PlaylistMap), source);
         }
         foreach (var op in plan.Operations.Where(x => x.Action == "Copy"))
@@ -74,7 +74,7 @@ public sealed class ManagedPlaylistWriter
         }
         var legacy=PathSafetyGuard.Destination(target,"_Playlist-Folder",source);
         if(migrated.Count>0&&Directory.Exists(legacy)&&!Directory.EnumerateFileSystemEntries(legacy).Any())Directory.Delete(legacy,false);
-        Replace(ManagedTarget.Marker, JsonFormat.Serialize(new ManagedTargetState(1, source, state.Playlists.Where(x=>!migrated.Contains(x)).Concat(playlists.Select(x => x.RelativePath)).Distinct(StringComparer.OrdinalIgnoreCase).ToList(), true, state.MetadataManaged || metadata != null)));
+        Replace(ManagedTarget.Marker, JsonFormat.Serialize(new ManagedTargetState(1, source, state.Playlists.Where(x=>!migrated.Contains(x)).Concat(playlists.Select(x => x.RelativePath)).Distinct(StringComparer.OrdinalIgnoreCase).ToList(), true, state.MetadataManaged || metadata != null,state.KeepSourceFolders)));
         void Replace(string relative, string content)
         {
             var path = PathSafetyGuard.Destination(target, relative, source);

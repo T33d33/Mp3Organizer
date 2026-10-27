@@ -99,11 +99,11 @@ public sealed class ReviewService(ProgressRepository repository,string workspace
                     finishFolders.Clear();position=previousPosition-1;break;
                 }
                 if(selected==null)return handled;
-                if(MetadataQualityEvaluator.Invalid(selected.Artist)||MetadataQualityEvaluator.Invalid(selected.Album)||(MetadataQualityEvaluator.Invalid(selected.Title)&&!ManualMetadataResolver.ConfirmedNumericTitle(selected.Title))||selected.Track==0)
+                if(MetadataQualityEvaluator.Invalid(selected.Artist)||MetadataQualityEvaluator.InvalidAlbum(selected.Album)||(MetadataQualityEvaluator.Invalid(selected.Title)&&!ManualMetadataResolver.ConfirmedNumericTitle(selected.Title))||selected.Track==0)
                 {
                     var missing=new List<string>();
                     if(MetadataQualityEvaluator.Invalid(selected.Artist))missing.Add("Artist");
-                    if(MetadataQualityEvaluator.Invalid(selected.Album))missing.Add("Album");
+                    if(MetadataQualityEvaluator.InvalidAlbum(selected.Album))missing.Add("Album");
                     if(MetadataQualityEvaluator.Invalid(selected.Title)&&!ManualMetadataResolver.ConfirmedNumericTitle(selected.Title))missing.Add("Title");
                     if(selected.Track==0)missing.Add("Track number");
                     console.Write("Not saved. Missing or suspicious: "+string.Join(", ",missing)+". Press M for guided questions, or Q to leave unresolved.");continue;

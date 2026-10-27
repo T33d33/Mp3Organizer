@@ -31,6 +31,19 @@ public sealed class AlbumYearCorrectionService(ProgressRepository repository,str
     public void Reconcile(string source,string target,Action<string>? progress=null)
     {
         var state=ManagedTarget.Check(target,source);if(state?.MetadataManaged!=true)return;
+        if(state.KeepSourceFolders)
+        {
+            // Refresh accepted metadata/playlists without relocating audio after B edits.
+            var manifestFile=PathSafetyGuard.Destination(target,TargetMetadataStore.FileName,source);
+            var metadata=JsonFormat.Read<Dictionary<string,AudioMetadata>>(File.ReadAllText(manifestFile));
+            var rows=repository.All().ToDictionary(x=>x.Id);
+            foreach(var mapping in repository.Mappings(target))
+                if(rows.TryGetValue(mapping.FileId,out var row)&&row.Status==ProcessingStatus.Processed&&metadata.ContainsKey(mapping.RelativePath))metadata[mapping.RelativePath]=row.Effective;
+            var folderMap=new PlaylistMapStore().Load(target);
+            var folderLists=new PlaylistBuilder().Build(metadata.Select(x=>new CopyOperation(x.Value,x.Key,"Existing")).ToList(),folderMap);
+            FolderPlaylistService.PreserveExisting(target,folderLists);PlaylistBuilder.IncludeRetired(folderLists,state);
+            new ManagedPlaylistWriter().Write(target,source,folderLists,folderMap,metadata);return;
+        }
         var journal=PathSafetyGuard.Destination(target,".album-year-repair.json",source);
         var manifestPath=PathSafetyGuard.Destination(target,TargetMetadataStore.FileName,source);
         var manifest=JsonFormat.Read<Dictionary<string,AudioMetadata>>(File.ReadAllText(manifestPath));
@@ -54,7 +67,7 @@ public sealed class AlbumYearCorrectionService(ProgressRepository repository,str
                     var values=matches.Where(x=>x.Effective.Identification?.FieldSources.GetValueOrDefault(field) is "FolderManualOverride" or "FileManualOverride").Select(x=>get(x.Effective)).Where(x=>!MetadataQualityEvaluator.Invalid(x)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
                     return values.Length==1?values[0]:null;
                 }
-                if(MetadataQualityEvaluator.Invalid(old.Album)&&Shared("Album",x=>x.Album) is {} album)corrected=corrected with{Album=album};
+                if(MetadataQualityEvaluator.InvalidAlbum(old.Album)&&Shared("Album",x=>x.Album) is {} album)corrected=corrected with{Album=album};
                 if((MetadataQualityEvaluator.Invalid(old.AlbumArtist)||Shared("AlbumArtist",x=>x.AlbumArtist)=="Various Artists")&&Shared("AlbumArtist",x=>x.AlbumArtist) is {} owner)corrected=corrected with{AlbumArtist=owner};
                 if(corrected==old)continue;
                 // Preserve the existing filename, including collision suffixes. Only replace the album directory.

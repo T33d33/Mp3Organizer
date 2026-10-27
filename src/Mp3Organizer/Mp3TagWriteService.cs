@@ -34,7 +34,7 @@ public sealed class Mp3TagWriteService(string workspace,ProgressRepository repos
             bool Replace(string existing)=>manual||MetadataQualityEvaluator.Invalid(existing);
             if(Replace(string.Join("; ",tags.Tag.Performers))&&!MetadataQualityEvaluator.Invalid(desired.Artist))tags.Tag.Performers=desired.TrackArtists.Length>0?desired.TrackArtists:[desired.Artist];
             if(Replace(string.Join("; ",tags.Tag.AlbumArtists))&&!MetadataQualityEvaluator.Invalid(desired.AlbumArtist))tags.Tag.AlbumArtists=[desired.AlbumArtist];
-            if(Replace(tags.Tag.Album??"")&&!MetadataQualityEvaluator.Invalid(desired.Album))tags.Tag.Album=desired.Album;
+            if(Replace(tags.Tag.Album??"")&&!MetadataQualityEvaluator.InvalidAlbum(desired.Album))tags.Tag.Album=desired.Album;
             if((Replace(tags.Tag.Title??"")||MetadataQualityEvaluator.FilenameTitle(original))&&!MetadataQualityEvaluator.Invalid(desired.Title))tags.Tag.Title=desired.Title;
             if((manual||tags.Tag.Track==0)&&desired.Track>0)tags.Tag.Track=desired.Track;
             if((manual||tags.Tag.Disc==0)&&desired.Disc>0)tags.Tag.Disc=desired.Disc;

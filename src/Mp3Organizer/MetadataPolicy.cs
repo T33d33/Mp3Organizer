@@ -35,7 +35,7 @@ public static class MetadataPolicy
             bool Same(string a,string b)=>MetadataNormalizer.Key(a)==MetadataNormalizer.Key(b);
             string Origin(string field)=>e.FieldSources.GetValueOrDefault(field)??(e.Source is MetadataSource.FolderFallback or MetadataSource.AcoustIdMusicBrainz?e.Source.ToString():"");
             var originalAlbum=e.Original.Album;
-            var independentAlbum=!MetadataQualityEvaluator.Invalid(originalAlbum)&&Same(originalAlbum,effective.Album);
+            var independentAlbum=!MetadataQualityEvaluator.InvalidAlbum(originalAlbum)&&Same(originalAlbum,effective.Album);
             var candidate=e.Candidates.FirstOrDefault(x=>x.RecordingId==e.RecordingId&&x.ReleaseId==e.ReleaseId&&x.Evidence.GetValueOrDefault("Fingerprint")>=.95*.55&&x.Evidence.GetValueOrDefault("Duration")>=.15&&x.Confidence-x.Evidence.GetValueOrDefault("Folder")-x.Evidence.GetValueOrDefault("Neighbors")>=.78);
             // Older versions did not always store candidates. Their explicit unique-recording/duration evidence is still usable when the embedded album supplied the release context.
             var verified=e.ConfidentRecording&&e.AcoustIdScore>=.95&&e.RecordingId!=""&&
