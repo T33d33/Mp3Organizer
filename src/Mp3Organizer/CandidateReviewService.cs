@@ -33,9 +33,10 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
             while(true)
             {
                 if(!drafts.ContainsKey(item.CurrentPath)&&MetadataQualityEvaluator.Invalid(row.Artist)
-                    &&!MetadataQualityEvaluator.Invalid(row.AlbumArtist)&&!ReviewService.CompilationAlbumArtist(row.AlbumArtist))
+                    &&(!MetadataQualityEvaluator.Invalid(row.AlbumArtist)||ReviewService.CompilationAlbumArtist(row.AlbumArtist)))
                 {
-                    row=row with{Artist=row.AlbumArtist,TrackArtists=[row.AlbumArtist]};
+                    var defaultArtist=ReviewService.CompilationAlbumArtist(row.AlbumArtist)?"Various Artists":row.AlbumArtist;
+                    row=row with{Artist=defaultArtist,TrackArtists=[defaultArtist]};
                     console.Write("Artist suggestion: "+row.Artist+" (from Album Artist; saved when accepted).");
                 }
                 if(albumFirst&&item.Effective.Track==0)
@@ -46,6 +47,7 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
                     console.Write($"Track number suggestion: {next} (sequential fallback; saved only when you accept).");
                 }
                 if(drafts.TryGetValue(item.CurrentPath,out var draft))row=ManualMetadataResolver.Apply(row,new(){Artist=draft.Artist,AlbumArtist=draft.AlbumArtist,Album=draft.Album,Title=draft.Title,TrackNumber=draft.Track,Year=draft.Year});
+                row=ReviewFilenameSuggestions.Apply(row);
                 console.Write("Album context:\nAlbum Artist: "+row.AlbumArtist+"\nAlbum: "+row.Album+"\nYear: "+row.Year+"\nTrack metadata:\nArtist: "+row.Artist+"\nTitle: "+row.Title+"\nTrack: "+row.Track);
                 for(var i=0;i<candidates.Count;i++)console.Write($"\n[{i+1}] Candidate\n{Display(candidates[i].Metadata)}");
                 console.Write((recommended>0?$"Recommended candidate: {recommended} (highest evidence score; not verified)\n[Enter] Save recommended candidate and continue | [1-{candidates.Count}] Select candidate":"No online candidates. [Enter] Save current metadata and continue")+"\n[M] Manual editing | [P] Play | [D] Defer | [/q] Stop");

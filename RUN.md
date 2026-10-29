@@ -1,9 +1,9 @@
 # Normal workflow: scan, then run
 
-Use the current **artifacts-output-validation** build. `scan` finds files; `run` performs pending analysis and then organized copying automatically. API configuration remains documented in [RECOGNITION.md](RECOGNITION.md). The lower-level commands remain available for diagnostics.
+Use the current **artifacts-numbered-review-titles** build. `scan` finds files; `run` performs pending analysis and then organized copying automatically. API configuration remains documented in [RECOGNITION.md](RECOGNITION.md). The lower-level commands remain available for diagnostics.
 
 ```powershell
-$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-output-validation\Mp3Organizer.dll'
+$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-numbered-review-titles\Mp3Organizer.dll'
 $workspace = 'E:\Mp3-Ai-test-workspace'
 
 dotnet $dll scan 'E:\Mp3-Ai-test' --workspace $workspace

@@ -1,6 +1,6 @@
 # LLM diagnostics and counters
 
-Use `artifacts-output-validation/Mp3Organizer.dll`. Command syntax and identification decisions are unchanged.
+Use `artifacts-numbered-review-titles/Mp3Organizer.dll`. Command syntax and identification decisions are unchanged.
 
 Incremental `analyze --limit N` now prints:
 

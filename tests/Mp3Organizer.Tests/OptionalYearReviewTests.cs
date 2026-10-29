@@ -19,7 +19,7 @@ public static partial class TestRunner
         var run=new RunPipelineService(repo,ws);Equal(1,run.ApplyReady(run.Targets(f.Target),f.Reports));Equal(ProcessingStatus.Processed,repo.All().Single().Status);
         True(!ManualMetadataResolver.NeedsInput(metadata with{Year=0,Album="1989"}));
         True(ManualMetadataResolver.IncompleteFields(metadata with{Album="",Year=0}).SequenceEqual(new[]{"Album"}));
-        repo.Save(row with{Status=ProcessingStatus.NeedsReview,Effective=metadata with{Artist="",AlbumArtist="Various Artists"}},"missing artist");
+        repo.Save(row with{Status=ProcessingStatus.NeedsReview,Effective=metadata with{Artist="",AlbumArtist=""}},"missing artist");
         var missing=new GuidedReviewInput("");new CandidateReviewService(repo,ws,missing).Run();True(missing.Output.Any(x=>x.Contains("missing or invalid: Artist")));
     }
     static void ConfirmedNumericSongWithOptionalYearSavesAndApplies()

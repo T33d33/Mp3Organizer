@@ -4,14 +4,14 @@ For normal use, start with **[scan + run](RUN.md)**. The analyze examples below 
 
 See [LLM observability](OBSERVABILITY.md) for actual HTTP-attempt messages, per-batch counters and persisted cumulative statistics.
 
-This extends the existing application, caches and `music-organizer.db`. Use the **artifacts-output-validation** build. No real music library or live recognition service was accessed during implementation.
+This extends the existing application, caches and `music-organizer.db`. Use the **artifacts-numbered-review-titles** build. No real music library or live recognition service was accessed during implementation.
 
 ## Recommended quick start
 
 Run in PowerShell, replacing credentials and the model name with values for your accounts:
 
 ```powershell
-$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-output-validation\Mp3Organizer.dll'
+$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-numbered-review-titles\Mp3Organizer.dll'
 $source = 'E:\Mp3-Ai-test'
 $workspace = 'E:\Mp3-Ai-test-workspace'
 $reports = 'E:\Mp3-Ai-test-reports'
@@ -120,7 +120,7 @@ After resolving, use the existing `plan`, `apply --dry-run`, `apply`, and `playl
 
 ## Verification
 
-Build with `./build-offline.ps1 -OutputDirectory artifacts-output-validation`. Run the dependency-free test executable using `dotnet artifacts-output-validation/Mp3Organizer.Tests.dll <scratch-folder>`. Tests mock OpenAI, AcoustID and MusicBrainz and generate synthetic WAV/MP3 data. Standard NuGet/MSBuild restore and a real provider/model inference remain unverified in this environment.
+Build with `./build-offline.ps1 -OutputDirectory artifacts-numbered-review-titles`. Run the dependency-free test executable using `dotnet artifacts-numbered-review-titles/Mp3Organizer.Tests.dll <scratch-folder>`. Tests mock OpenAI, AcoustID and MusicBrainz and generate synthetic WAV/MP3 data. Standard NuGet/MSBuild restore and a real provider/model inference remain unverified in this environment.
 
 
 

@@ -64,7 +64,7 @@ foreach ($name in @('OPENAI_API_KEY','MP3ORGANIZER_CODEX_MODEL','MP3ORGANIZER_CO
 Write-Host 'Setup saved. No need to repeat after restarting Windows. Missing optional LLM settings use the existing fallback.'
 Write-Host ''
 Write-Host 'NEXT: Run the following commands in your PowerShell terminal to continue processing:'
-Write-Host ('$dll = ' + "'" + (Join-Path $PSScriptRoot 'artifacts-output-validation\Mp3Organizer.dll') + "'")
+Write-Host ('$dll = ' + "'" + (Join-Path $PSScriptRoot 'artifacts-numbered-review-titles\Mp3Organizer.dll') + "'")
 Write-Host "dotnet `$dll run --online --workspace 'E:\Mp3-Ai-test-workspace' --target 'E:\Mp3-Ai-test-organized' --reports 'E:\Mp3-Ai-test-reports'"
 Write-Host ''
 Write-Host 'If you added new source folders, run this BEFORE the run command:'

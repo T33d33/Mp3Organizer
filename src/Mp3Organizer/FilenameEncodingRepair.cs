@@ -18,10 +18,28 @@ public static class FilenameEncodingRepair
         // Require the complete repaired value in the actual filename or immediate folder.
         // Never guess diacritics or replace tags merely because folder text differs.
         var evidence=Path.GetFileNameWithoutExtension(file.FileName)+" / "+Path.GetFileName(Path.GetDirectoryName(file.FullPath));
-        var matches=Repairs(value).Where(x=>x!=value&&System.Text.RegularExpressions.Regex.IsMatch(evidence,
+        var matches=Repairs(value).Concat(PolishSpellings(value,evidence)).Where(x=>x!=value&&System.Text.RegularExpressions.Regex.IsMatch(evidence,
             @"(?<![\p{L}\p{N}])"+System.Text.RegularExpressions.Regex.Escape(x)+@"(?![\p{L}\p{N}])",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase|System.Text.RegularExpressions.RegexOptions.CultureInvariant)).Distinct().ToArray();
         return matches.Length==1?matches[0]:null;
+    }
+    private static IEnumerable<string> PolishSpellings(string value,string evidence)
+    {
+        const string accented="ąćęłńóśźżĄĆĘŁŃÓŚŹŻ";
+        const string plain="acelnoszzACELNOSZZ";
+        string Fold(string text)=>new(text.Select(c=>accented.IndexOf(c) is var i&&i>=0?plain[i]:c).ToArray());
+        // Recover only accents that actually exist in a matching full path phrase.
+        // Distinct possible spellings remain ambiguous and are not selected.
+        var normalized=value.Normalize(NormalizationForm.FormC);
+        evidence=evidence.Normalize(NormalizationForm.FormC);
+        for(var i=0;i+normalized.Length<=evidence.Length;i++)
+        {
+            if(i>0&&char.IsLetterOrDigit(evidence[i-1]))continue;
+            var end=i+normalized.Length;if(end<evidence.Length&&char.IsLetterOrDigit(evidence[end]))continue;
+            var candidate=evidence.Substring(i,normalized.Length);
+            if(candidate.Any(c=>accented.Contains(c))&&string.Equals(Fold(candidate),Fold(normalized),StringComparison.OrdinalIgnoreCase)
+                &&candidate.Count(c=>accented.Contains(c))>normalized.Count(c=>accented.Contains(c)))yield return candidate;
+        }
     }
     private static IEnumerable<string> Repairs(string value)
     {

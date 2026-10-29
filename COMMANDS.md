@@ -4,7 +4,7 @@ The intended normal workflow is now **scan + run**. See [RUN.md](RUN.md) for def
 
 Incremental analysis now reports actual LLM HTTP attempts and outcomes, with batch statistics and cumulative `status` counts. See [counter definitions and diagnostics](OBSERVABILITY.md).
 
-This guide describes the current **artifacts-output-validation** build. Start with the updated [recommended workflow and runtime recognition guide](RECOGNITION.md) for OpenAI configuration, review, verified tag writes and quota/resume handling. Older build folders and version-specific launchers remain on disk. The main Mp3Organizer.cmd and Mp3Organizer.ps1 launchers now select artifacts-output-validation. Source-folder grouping, policy migration and playlist ordering are documented in [FOLDERS.md](FOLDERS.md); no classification step is required. [Original playlist import](PLAYLIST-IMPORT.md) runs after organization and generates permanent PL-coded names with corrected target paths. All examples use PowerShell and your test-library paths. Examples are instructions for you to run; writing this guide did not execute them against your music.
+This guide describes the current **artifacts-numbered-review-titles** build. Start with the updated [recommended workflow and runtime recognition guide](RECOGNITION.md) for OpenAI configuration, review, verified tag writes and quota/resume handling. Older build folders and version-specific launchers remain on disk. The main Mp3Organizer.cmd and Mp3Organizer.ps1 launchers now select artifacts-numbered-review-titles. Source-folder grouping, policy migration and playlist ordering are documented in [FOLDERS.md](FOLDERS.md); no classification step is required. [Original playlist import](PLAYLIST-IMPORT.md) runs after organization and generates permanent PL-coded names with corrected target paths. All examples use PowerShell and your test-library paths. Examples are instructions for you to run; writing this guide did not execute them against your music.
 
 ## 1. Recommended quick start
 
@@ -13,7 +13,7 @@ This guide describes the current **artifacts-output-validation** build. Start wi
 Use `dotnet` with the explicit DLL path. You can then run commands from any working directory, including `C:\Windows\system32`, without accidentally creating a different workspace there.
 
 ```powershell
-$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-output-validation\Mp3Organizer.dll'
+$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-numbered-review-titles\Mp3Organizer.dll'
 $source = 'E:\Mp3-Ai-test'
 $target = 'E:\Mp3-Ai-test-organized'
 $workspace = 'E:\Mp3-Ai-test-workspace'
@@ -521,8 +521,8 @@ After any command inspect `$LASTEXITCODE`. Exit 0 is not a promise that all meta
 From the solution directory:
 
 ```powershell
-.\build-offline.ps1 -OutputDirectory artifacts-output-validation
-dotnet .\artifacts-output-validation\Mp3Organizer.Tests.dll 'C:\Users\tglaz\Documents\Codex\Mp3Organizer-test-scratch'
+.\build-offline.ps1 -OutputDirectory artifacts-numbered-review-titles
+dotnet .\artifacts-numbered-review-titles\Mp3Organizer.Tests.dll 'C:\Users\tglaz\Documents\Codex\Mp3Organizer-test-scratch'
 ```
 
 The offline script uses installed .NET 10 SDK/reference assemblies and an installed TagLibSharp 2.3.0 DLL. `-TagLibDll PATH` overrides that dependency location. Do not rebuild into an output currently in use; choose another output directory and update `$dll` for the next run.

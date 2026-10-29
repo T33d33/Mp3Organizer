@@ -2,6 +2,18 @@ using Mp3Organizer;
 namespace Mp3Organizer.Tests;
 public static partial class TestRunner
 {
+    static void PolishAccentsReusedOnlyFromMatchingPathPhrase()
+    {
+        var f=Fixture();var basic=new TagLibMetadataReader(new ReadOnlySource()).Read(f.File);
+        var row=basic with{FullPath=Path.Combine(f.Source,"Elżbieta Adamiak - Zbieram siebie - 2009","Song.wav"),Artist="Elzbieta Adamiak",AlbumArtist="Elzbieta Adamiak"};
+        Equal("Elżbieta Adamiak",FilenameEncodingRepair.Apply(row).Artist);Equal("Elżbieta Adamiak",FilenameEncodingRepair.Apply(row).AlbumArtist);
+        Equal("Elżbieta Adamiak",MetadataFieldMerger.Merge(row,row).Artist);
+        Equal(row.Artist,FilenameEncodingRepair.Apply(row with{Identification=new(){FieldSources=new(){["Artist"]="FileManualOverride"}}}).Artist);
+        Equal("Other Singer",FilenameEncodingRepair.Apply(row with{Artist="Other Singer"}).Artist);
+        Equal("Adamiak",FilenameEncodingRepair.Apply(row with{Artist="Adamiak"}).Artist);
+        Equal("Łódź",FilenameEncodingRepair.Field(row with{FileName="Łódź.wav"},"Title","Lodz"));
+        True(FilenameEncodingRepair.Field(row with{FileName="Łódź Lodź.wav"},"Title","Lodz")==null);
+    }
     static void PolishArtistAlbumRepairUsesPathEvidence()
     {
         var f=Fixture();var basic=new TagLibMetadataReader(new ReadOnlySource()).Read(f.File);
