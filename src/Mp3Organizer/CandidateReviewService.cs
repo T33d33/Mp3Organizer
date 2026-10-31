@@ -11,16 +11,17 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
     public int SkippedCount {get;private set;}
     public int Run()
     {
+        var albumSetup=new AlbumSetupService(repository,workspace,console);
         string? finishFolder=null;
         var queue=repository.All().Where(x=>x.Status==ProcessingStatus.NeedsReview).OrderBy(x=>x.CurrentPath,NaturalPathComparer.Instance).ToList();
         for(var position=0;position<queue.Count;position++)
         {
-            var item=repository.All().Single(x=>x.Id==queue[position].Id);
+            var item=repository.Find(queue[position].Id)??throw new IOException("Review track is no longer indexed.");
             var currentFolder=Path.GetDirectoryName(item.CurrentPath)!;
             if(!string.Equals(finishFolder,currentFolder,StringComparison.OrdinalIgnoreCase))finishFolder=null;
             var folderLabel=Path.GetRelativePath(item.SourceRoot,currentFolder);
-            if(albumFirst&&!new AlbumSetupService(repository,workspace,console).Ensure(item))return ManuallyReviewedCount;
-            item=repository.All().Single(x=>x.Id==item.Id);
+            if(albumFirst&&!albumSetup.Ensure(item))return ManuallyReviewedCount;
+            item=repository.Find(item.Id)??throw new IOException("Review track is no longer indexed.");
             var row=ReviewFilenameSuggestions.Apply(item.Effective);
             if(FilenameEncodingRepair.Title(row) is {} repairedTitle)
             {
@@ -41,7 +42,7 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
                 }
                 if(albumFirst&&item.Effective.Track==0)
                 {
-                    var next=AlbumTrackSequence.Suggest(item,repository.All(),new AlbumSetupService(repository,workspace,console).Context(item)?.ReviewFileIds);
+                    var next=AlbumTrackSequence.Suggest(item,repository.All(),albumSetup.Context(item)?.ReviewFileIds);
                     if(drafts.TryGetValue(item.CurrentPath,out var oldDraft)&&suggestedNumbers.TryGetValue(item.CurrentPath,out var oldSuggestion)&&oldDraft.Track==oldSuggestion)drafts[item.CurrentPath]=oldDraft with{Track=next};
                     suggestedNumbers[item.CurrentPath]=next;row=row with{Track=next};
                     console.Write($"Track number suggestion: {next} (sequential fallback; saved only when you accept).");
@@ -60,7 +61,7 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
                     var edit=new FolderAlbumEditor(repository,workspace,console).Edit(item);if(edit.Stop)return ManuallyReviewedCount;
                     if(edit.Saved)
                     {
-                        item=repository.All().Single(x=>x.Id==item.Id);row=item.Effective;
+                        item=repository.Find(item.Id)??throw new IOException("Review track is no longer indexed.");row=item.Effective;
                         if(drafts.TryGetValue(item.CurrentPath,out var priorDraft))drafts[item.CurrentPath]=priorDraft with{Album=row.Album,AlbumArtist=row.AlbumArtist,Year=row.Year};
                     }
                     continue;
@@ -99,7 +100,7 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
                         selected=new(Keep(c.Artist,row.Artist),Keep(c.AlbumArtist,row.AlbumArtist),MetadataQualityEvaluator.InvalidAlbum(c.Album)?row.Album:c.Album,Keep(c.Title,row.Title),c.Track>0?c.Track:row.Track,c.Disc>0?c.Disc:row.Disc,c.Year>0?c.Year:row.Year);
                     }
                 }
-                if(!selectedCandidate&&albumFirst&&new AlbumSetupService(repository,workspace,console).Context(item) is {} context)
+                if(!selectedCandidate&&albumFirst&&albumSetup.Context(item) is {} context)
                     selected=selected with{Album=context.Album??selected.Album,AlbumArtist=context.AlbumArtist??selected.AlbumArtist,Year=context.Year??selected.Year};
                 drafts[item.CurrentPath]=selected;
                 var albumDecision=false;
@@ -121,24 +122,24 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
                             data.Folders[entry.Key]=entry.Value with{ReviewFileIds=entry.Value.ReviewFileIds.Where(id=>id!=item.Id).ToArray()};
                 }
                 // Empty strings explicitly clear text; zero represents a deliberate unknown number.
-                var value=new ManualOverride{LastKnownPath=item.CurrentPath,ConfirmedLooseTrack=string.IsNullOrWhiteSpace(selected.Album),Artist=selected.Artist,AlbumArtist=selected.AlbumArtist,Album=selected.Album,Title=selected.Title,TrackNumber=selected.Track,Year=selected.Year,YearTrackOnly=!albumDecision,DiscNumber=selected.Disc==0?null:selected.Disc};
+                var value=new ManualOverride{ExplicitlyConfirmedTitle=manual||row.ExplicitlyConfirmedTitle==selected.Title?selected.Title:null,LastKnownPath=item.CurrentPath,ConfirmedLooseTrack=string.IsNullOrWhiteSpace(selected.Album),Artist=selected.Artist,AlbumArtist=selected.AlbumArtist,Album=selected.Album,Title=selected.Title,TrackNumber=selected.Track,Year=selected.Year,YearTrackOnly=!albumDecision,DiscNumber=selected.Disc==0?null:selected.Disc};
                 data.Files.TryGetValue(key,out var previousCandidate);
                 var acceptedCandidates=new Dictionary<string,TagMetadata>(previousCandidate?.AcceptedCandidateMetadata??new());
                 if(selectedCandidate||acceptedCandidates.ContainsKey(item.Id))acceptedCandidates[item.Id]=selected;
                 if(acceptedCandidates.Count>0)value=value with{CandidateReviewFileIds=acceptedCandidates.Keys.ToArray(),AcceptedCandidateMetadata=acceptedCandidates};
-                if(!selectedCandidate&&albumFirst&&new AlbumSetupService(repository,workspace,console).Context(item)!=null)
+                if(!selectedCandidate&&albumFirst&&albumSetup.Context(item)!=null)
                 {
                     // Album context is keyed by file IDs, not content hash: do not leak it to an identical file outside the scope.
                     data.Files.TryGetValue(key,out var prior);
                     value=value with{Album=prior?.Album,AlbumArtist=prior?.AlbumArtist,Year=prior?.Year};
                 }
                 data.Files[key]=value;store.Save(data);
-                var updated=ManualMetadataResolver.Apply(row,value);if(albumFirst&&new AlbumSetupService(repository,workspace,console).Context(item) is {} savedContext)updated=updated with{Album=savedContext.Album??updated.Album,AlbumArtist=savedContext.AlbumArtist??updated.AlbumArtist,Year=savedContext.Year??updated.Year};var evidence=row.Identification??new();var needs=ManualMetadataResolver.NeedsInput(updated,selected.Title);
+                var updated=ManualMetadataResolver.Apply(row,value);if(albumFirst&&albumSetup.Context(item) is {} savedContext)updated=updated with{Album=savedContext.Album??updated.Album,AlbumArtist=savedContext.AlbumArtist??updated.AlbumArtist,Year=savedContext.Year??updated.Year};var evidence=row.Identification??new();var needs=ManualMetadataResolver.NeedsInput(updated,selected.Title);
                 updated=updated with{Identification=evidence with{MetadataPolicyVersion=2,Status=needs?"Review":"ManualResolved",ManualOverrideHit=true,Source=MetadataSource.FileManualOverride,RecognitionMethod="Manual",ReviewReasons=needs?["ManualMetadataIncomplete"]:[],ReviewReason=needs?"Missing or invalid: "+string.Join(", ",ManualMetadataResolver.IncompleteFields(updated,selected.Title)):"",FieldSources=MetadataFieldMerger.ManualSources(evidence,null,value)}};
                 var accepted=item with{Effective=updated,Status=needs?ProcessingStatus.NeedsReview:ProcessingStatus.Ready,ErrorMessage="",LastProcessedUtc=DateTime.UtcNow.ToString("O")};
                 if(tags!=null&&!needs)tags.WriteAndSave(accepted,true);else repository.Save(accepted,"Explicit review confirmation; track metadata saved");
                 if(albumDecision)new AlbumYearCorrectionService(repository,workspace).Propagate();
-                if(albumFirst)new AlbumSetupService(repository,workspace,console).ReconcileArtist(accepted);
+                if(albumFirst)albumSetup.ReconcileArtist(accepted);
                 reviewed.Add(item.Id);console.Write(needs?"Saved; NeedsReview — missing or invalid: "+string.Join(", ",ManualMetadataResolver.IncompleteFields(updated,selected.Title))+".":"Saved; Ready.");break;
             }
         }

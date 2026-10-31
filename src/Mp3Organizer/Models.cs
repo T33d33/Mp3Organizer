@@ -2,6 +2,7 @@ namespace Mp3Organizer;
 
 public sealed record AudioMetadata
 {
+    public string? ExplicitlyConfirmedTitle {get;init;}
     public bool ConfirmedLooseTrack {get;init;}
     public string[] SuppressedAutomaticFields {get;init;}=[];
     public string FullPath { get; init; } = "";

@@ -65,7 +65,7 @@ Backups are named `backups/music-organizer-<UTC timestamp>-<unique suffix>.db` u
 ## PowerShell examples — not executed against your library
 
 ```powershell
-$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-numbered-review-titles\Mp3Organizer.dll'
+$dll = 'C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\outputs\Mp3Organizer\artifacts-explicit-title\Mp3Organizer.dll'
 $workspace = 'E:\Mp3-Ai-test-workspace'
 
 dotnet $dll scan 'E:\Mp3-Ai-test' --workspace $workspace
@@ -89,7 +89,7 @@ The reset-file/folder examples use placeholder paths; substitute actual indexed 
 
 The complete offline .NET 10 application and test suite compile with warnings treated as errors. 222 tests pass, including unchanged-scan read avoidance, limits, processed-file exclusion, persistence across a separate process, interruption after commit, scoped resets, forced rescan, SHA relocation/duplicates, backup-before-confirmation, backup failure, existing-workflow integration and source immutability. Tests use temporary SQLite databases, synthetic WAV fixtures and mocked identification. No real music library was scanned.
 
-Standard NuGet/MSBuild restore remains unverified due to the existing environment restriction. Rebuild this output with `./build-offline.ps1 -OutputDirectory artifacts-numbered-review-titles`; run `dotnet artifacts-numbered-review-titles/Mp3Organizer.Tests.dll <scratch-directory>`.
+Standard NuGet/MSBuild restore remains unverified due to the existing environment restriction. Rebuild this output with `./build-offline.ps1 -OutputDirectory artifacts-explicit-title`; run `dotnet artifacts-explicit-title/Mp3Organizer.Tests.dll <scratch-directory>`.
 
 
 

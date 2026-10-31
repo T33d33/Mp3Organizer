@@ -9,6 +9,7 @@ public sealed record ManualOverride
     public Dictionary<string,TagMetadata>? AcceptedCandidateMetadata {get;init;}
     public bool AlbumSetupConfirmed {get;init;}
     public bool ProvisionalAlbumArtist {get;init;}
+    public string? ExplicitlyConfirmedTitle {get;init;}
     public bool ConfirmedLooseTrack {get;init;}
     public string LastKnownPath {get;init;}="";
     public string[]? AnchorSha256 {get;init;}

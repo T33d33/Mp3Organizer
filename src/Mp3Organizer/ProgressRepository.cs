@@ -28,6 +28,11 @@ public sealed partial class ProgressRepository : IDisposable
         }
         catch{db.Dispose();throw;}
     }
+    public IndexedMusic? Find(string id)
+    {
+        var rows=db.Query("SELECT id,source_root,original_path,current_path,basic_json,effective_json,status,last_processed_utc,error_message FROM music_files WHERE id=?",id);
+        return rows.Count==0?null:Read(rows[0]);
+    }
     public List<IndexedMusic> All()=>db.Query("SELECT id,source_root,original_path,current_path,basic_json,effective_json,status,last_processed_utc,error_message FROM music_files ORDER BY rowid").Select(Read).ToList();
     public string? GetRunTarget(string source)=>db.Query("SELECT target FROM run_targets WHERE source_root=?",source).FirstOrDefault()?[0];
     public void SetRunTarget(string source,string target)=>db.Query("INSERT INTO run_targets VALUES(?,?) ON CONFLICT(source_root) DO UPDATE SET target=excluded.target",source,target);

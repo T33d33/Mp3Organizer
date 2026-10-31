@@ -2,9 +2,10 @@ namespace Mp3Organizer;
 
 public sealed class AlbumSetupService(ProgressRepository repository,string workspace,IReviewConsole console)
 {
+    private string? lastAppliedScope;
     public bool Ensure(IndexedMusic item)
     {
-        var folder=Path.GetDirectoryName(item.CurrentPath)!;var members=Members(folder);
+        var folder=Path.GetDirectoryName(item.CurrentPath)!;
         var store=new ManualResolutionStore(workspace,item.SourceRoot);var data=store.Load();
         if(data.Files.TryGetValue("sha256:"+item.Basic.Sha256.ToLowerInvariant(),out var candidate)&&candidate.CandidateReviewFileIds?.Contains(item.Id)==true)return true;
         var scoped=data.Folders.FirstOrDefault(x=>x.Value.AlbumSetupConfirmed&&x.Value.ReviewFileIds?.Contains(item.Id)==true&&(!OutputLayout.KeepFolders(workspace)||x.Value.LastKnownPath.Equals(folder,StringComparison.OrdinalIgnoreCase)));
@@ -22,7 +23,7 @@ public sealed class AlbumSetupService(ProgressRepository repository,string works
                 var ownKey=own.Key??"folder:"+Guid.NewGuid().ToString("N");data.Folders[ownKey]=decision;RemoveOverlap(data,ownKey,decision.ReviewFileIds);store.Save(data);Apply(folder,decision);return true;
             }
         }
-        if(scoped.Value!=null){Apply(scoped.Value.LastKnownPath,scoped.Value);return true;}
+        if(scoped.Value!=null){var signature=JsonFormat.Serialize(scoped.Value);if(lastAppliedScope!=signature){Apply(scoped.Value.LastKnownPath,scoped.Value);lastAppliedScope=signature;}return true;}
         var legacy=data.Folders.Where(x=>x.Value.AlbumSetupConfirmed&&x.Value.ReviewFileIds==null&&PathSafetyGuard.Within(item.CurrentPath,x.Value.LastKnownPath)&&(!OutputLayout.KeepFolders(workspace)||x.Value.LastKnownPath.Equals(folder,StringComparison.OrdinalIgnoreCase))).OrderByDescending(x=>x.Value.LastKnownPath.Length).FirstOrDefault();
         if(legacy.Value!=null)
         {
@@ -31,6 +32,7 @@ public sealed class AlbumSetupService(ProgressRepository repository,string works
             var answer=console.Read()?.Trim();if(answer!= ""&&!string.Equals(answer,"YES",StringComparison.OrdinalIgnoreCase))return false;
             var upgraded=legacy.Value with{ReviewFileIds=selected.Select(x=>x.Id).ToArray()};data.Folders[legacy.Key]=upgraded;RemoveOverlap(data,legacy.Key,upgraded.ReviewFileIds!);store.Save(data);Apply(upgraded.LastKnownPath,upgraded);return true;
         }
+        var members=Members(folder);
         var existing=data.Folders.FirstOrDefault(x=>x.Value.LastKnownPath.Equals(folder,StringComparison.OrdinalIgnoreCase));
         if(existing.Value?.ReviewFileIds!=null)members=members.Where(x=>!existing.Value.ReviewFileIds.Contains(x.Id)).ToList();
         if(members.All(x=>!MetadataQualityEvaluator.InvalidAlbum(x.Effective.Album)&&!MetadataQualityEvaluator.Invalid(x.Effective.AlbumArtist)&&x.Effective.Year>=1000))return true;
@@ -85,18 +87,21 @@ public sealed class AlbumSetupService(ProgressRepository repository,string works
         return first;
     }
     private List<IndexedMusic> Members(string folder)=>repository.All().Where(x=>OutputLayout.KeepFolders(workspace)?string.Equals(Path.GetDirectoryName(x.CurrentPath),folder,StringComparison.OrdinalIgnoreCase):PathSafetyGuard.Within(x.CurrentPath,folder)).ToList();
-    private List<IndexedMusic> Selected(ManualOverride decision)=>repository.All().Where(x=>decision.ReviewFileIds?.Contains(x.Id)==true).ToList();
+    private List<IndexedMusic> Selected(ManualOverride decision)=>(decision.ReviewFileIds??[]).Select(repository.Find).Where(x=>x!=null).Select(x=>x!).ToList();
     public ManualOverride? Context(IndexedMusic item)=>new ManualResolutionStore(workspace,item.SourceRoot).Load().Folders.Values.FirstOrDefault(x=>x.AlbumSetupConfirmed&&x.ReviewFileIds?.Contains(item.Id)==true&&(!OutputLayout.KeepFolders(workspace)||x.LastKnownPath.Equals(Path.GetDirectoryName(item.CurrentPath),StringComparison.OrdinalIgnoreCase)));
     public void Apply(string folder,ManualOverride decision)
     {
         foreach(var item in Selected(decision).Where(x=>x.Status is ProcessingStatus.NeedsReview or ProcessingStatus.Ready or ProcessingStatus.Processed))
         {
             var m=item.Effective;var fill=new ManualOverride{Album=decision.Album,AlbumArtist=decision.AlbumArtist,Year=decision.Year};
+            if(decision.ReviewFileIds==null)
+            {
             var store=new ManualResolutionStore(workspace,item.SourceRoot);var data=store.Load();var key="sha256:"+item.Basic.Sha256.ToLowerInvariant();
-            if(decision.ReviewFileIds==null&&data.Files.TryGetValue(key,out var specific))
+            if(data.Files.TryGetValue(key,out var specific))
             {
                 var corrected=specific with{Album=fill.Album??specific.Album,AlbumArtist=fill.AlbumArtist??specific.AlbumArtist,Year=fill.Year??specific.Year};
                 if(corrected!=specific){data.Files[key]=corrected;store.Save(data);}
+            }
             }
             var updated=ManualMetadataResolver.Apply(m,fill);var e=m.Identification??new();updated=updated with{Identification=e with{FieldSources=MetadataFieldMerger.ManualSources(e,fill,null)}};
             if(updated.Album!=m.Album||updated.AlbumArtist!=m.AlbumArtist||updated.Year!=m.Year)repository.Save(item with{Effective=updated},"Confirmed album setup filled shared fields only");

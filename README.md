@@ -289,3 +289,9 @@ Review artist fallback: when a track artist is missing or invalid, review propos
 Polish spelling suggestions also reuse missing accents from the filename or immediate folder when the complete existing name matches apart from Polish diacritics (for example Elzbieta Adamiak -> Elżbieta Adamiak). Ambiguous spellings and manual/online decisions are not changed. Pending review and album setup use these suggestions without rescanning.
 
 Review cleans a numbered filename used verbatim as a title when its number agrees with the track number (or the track number is missing). For example 11. Największy teatr świata becomes Największy teatr świata with Track 11. This also repairs previous Enter/F acceptances that remain NeedsReview. Custom titles, conflicting track numbers and numeric song names such as 5-15 are retained. Suggestions persist only on acceptance.
+
+Review performance: current-track reads use indexed database lookups. An unchanged album scope is applied once while reviewing that scope, rather than rereading/reapplying every member between songs. Updated album decisions are detected and reapplied. Each accepted track is still persisted immediately with existing source verification, backups and concurrent-edit checks.
+
+Step 04 shows preparation, album-correction and source-verification progress before planning. Album decisions are loaded once and indexed by track for each correction pass, rather than reread per organized file. Source hash checks and copy validation still run; large libraries can still take time to verify.
+
+Manual title confirmation: M followed by confirmation records the exact accepted title, so real song names such as Title or Unknown are not rejected merely as placeholders. Blank or control-character titles remain invalid. The confirmation survives restart/apply and applies only to that exact value; automatic suggestions do not receive this override.

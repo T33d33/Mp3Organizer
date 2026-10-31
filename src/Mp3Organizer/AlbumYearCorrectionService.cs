@@ -51,6 +51,8 @@ public sealed class AlbumYearCorrectionService(ProgressRepository repository,str
         if(File.Exists(journal))moves=JsonFormat.Read<List<MoveEntry>>(File.ReadAllText(journal));
         else
         {
+            progress?.Invoke("Checking saved album decisions against organized files...");
+            var decisionsByFile=new ManualResolutionStore(workspace,source).Load().Folders.Values.Where(x=>x.AlbumSetupConfirmed&&x.ReviewFileIds!=null).SelectMany(x=>x.ReviewFileIds!.Select(id=>(Id:id,Decision:x))).ToLookup(x=>x.Id,x=>x.Decision);
             moves=new();var items=repository.All().ToDictionary(x=>x.Id);
             foreach(var group in repository.Mappings(target).GroupBy(x=>x.RelativePath,StringComparer.OrdinalIgnoreCase))
             {
@@ -58,7 +60,7 @@ public sealed class AlbumYearCorrectionService(ProgressRepository repository,str
                 var matches=group.Select(x=>items.GetValueOrDefault(x.FileId)).Where(x=>x!=null&&x.Status==ProcessingStatus.Processed).Select(x=>x!).ToList();
                 var years=matches.Select(x=>x.Effective.Year).Where(x=>x>=1000&&x<=9999).Distinct().ToArray();
                 var corrected=old;
-                var decisions=new ManualResolutionStore(workspace,source).Load().Folders.Values.Where(x=>x.AlbumSetupConfirmed&&x.ReviewFileIds!=null&&matches.Any(m=>x.ReviewFileIds.Contains(m.Id))).Select(x=>(x.Album,x.AlbumArtist,x.Year)).Distinct().ToArray();
+                var decisions=matches.SelectMany(m=>decisionsByFile[m.Id]).Select(x=>(x.Album,x.AlbumArtist,x.Year)).Distinct().ToArray();
                 if(decisions.Length==1){var context=decisions[0];corrected=corrected with{Album=context.Album??old.Album,AlbumArtist=context.AlbumArtist??old.AlbumArtist,Year=context.Year??old.Year,Date=(context.Year??old.Year).ToString()};}
 
                 if(old.Year==0&&years.Length==1&&matches.Any(x=>TrustedYear(x.Effective)))corrected=corrected with{Year=years[0],Date=years[0].ToString()};

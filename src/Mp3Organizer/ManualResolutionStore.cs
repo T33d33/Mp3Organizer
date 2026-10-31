@@ -50,6 +50,7 @@ public sealed class ManualResolutionStore
                 if(string.IsNullOrWhiteSpace(item.LastKnownPath)||!Path.IsPathFullyQualified(item.LastKnownPath))throw new IOException(location+".lastKnownPath must be an absolute path.");
                 PathSafetyGuard.Canonical(item.LastKnownPath);
                 foreach(var text in new[]{item.Artist,item.AlbumArtist,item.Album,item.Title})if(text!=null&&(text.Length>500||text.Any(char.IsControl)))throw new IOException(location+": text fields must be <=500 characters without control characters.");
+                if(item.ExplicitlyConfirmedTitle!=null&&item.ExplicitlyConfirmedTitle!=item.Title)throw new IOException(location+": title confirmation must match Title.");
                 if(item.Year is >9999)throw new IOException(location+".year must be null or between 1 and 9999.");
                 if(item.TrackNumber is >9999||item.DiscNumber is 0 or >9999)throw new IOException(location+": trackNumber/discNumber must be null or between 1 and 9999.");
                 if(item.AnchorSha256!=null&&item.AnchorSha256.Any(x=>x==null||!Regex.IsMatch(x,@"^[a-fA-F0-9]{64}$")))throw new IOException(location+".anchorSha256 contains an invalid hash.");

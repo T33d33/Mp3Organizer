@@ -24,13 +24,16 @@ public static partial class TestRunner
     }
     static void ConfirmedNumericSongWithOptionalYearSavesAndApplies()
     {
+        foreach(var title in new[]{"5-15","7/8 & 11/8","7_8 & 11_8"})
+        {
         var f=Fixture();var ws=ProgressWorkspace(f);var before=Snapshot(f.Source);using var repo=new ProgressRepository(ws);new IncrementalProgressService(repo).Scan(f.Source);var row=repo.All().Single();
-        repo.Save(MakeReady(row) with{Status=ProcessingStatus.NeedsReview,Effective=MakeReady(row).Effective with{Artist="The Who",AlbumArtist="The Who",Album="Quadrophenia",Title="5-15",Year=0,Track=1}},"optional year fixture");
+        repo.Save(MakeReady(row) with{Status=ProcessingStatus.NeedsReview,Effective=MakeReady(row).Effective with{Artist="The Who",AlbumArtist="The Who",Album="Quadrophenia",Title=title,Year=0,Track=1}},"optional year fixture");
         True(ManualMetadataResolver.NeedsInput(repo.All().Single().Effective));
         new CandidateReviewService(repo,ws,new GuidedReviewInput("")).Run();
-        var saved=repo.All().Single();Equal(ProcessingStatus.Ready,saved.Status);Equal("5-15",saved.Effective.Title);Equal(0u,saved.Effective.Year);True(!ManualMetadataResolver.NeedsInput(saved.Effective));
+        var saved=repo.All().Single();Equal(ProcessingStatus.Ready,saved.Status);Equal(title,saved.Effective.Title);Equal(0u,saved.Effective.Year);True(!ManualMetadataResolver.NeedsInput(saved.Effective));
         Equal(0,new CandidateReviewService(repo,ws,new GuidedReviewInput("/q")).Run());
         var run=new RunPipelineService(repo,ws);Equal(1,run.ApplyReady(run.Targets(f.Target),f.Reports));Equal(ProcessingStatus.Processed,repo.All().Single().Status);Equal(before,Snapshot(f.Source));
         True(ManualMetadataResolver.NeedsInput(saved.Effective with{Title="Track 01"},"Track 01"));
+        }
     }
 }

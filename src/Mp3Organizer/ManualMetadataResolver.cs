@@ -63,11 +63,12 @@ public sealed class ManualMetadataResolver(IMetadataResolver inner,ManualResolut
     public static bool HasFields(ManualOverride? value)=>value!=null&&(value.Artist!=null||value.AlbumArtist!=null||value.Album!=null||value.Title!=null||value.TrackNumber!=null||value.DiscNumber!=null||value.Year!=null);
     public static AudioMetadata Apply(AudioMetadata row,ManualOverride? value)=>value==null?row:row with
     {
+        ExplicitlyConfirmedTitle=value.Title==null||(value.Title==row.Title&&value.ExplicitlyConfirmedTitle==null)?row.ExplicitlyConfirmedTitle:value.ExplicitlyConfirmedTitle,
         ConfirmedLooseTrack=value.ConfirmedLooseTrack,Artist=value.Artist??row.Artist,TrackArtists=value.Artist==null?row.TrackArtists:value.Artist==""?[]:[value.Artist],AlbumArtist=value.AlbumArtist??row.AlbumArtist,
         Album=value.Album??row.Album,Title=value.Title??row.Title,Track=value.TrackNumber??row.Track,Disc=value.DiscNumber??row.Disc,Year=value.Year??row.Year,
         Date=value.Year.HasValue?value.Year.Value.ToString(System.Globalization.CultureInfo.InvariantCulture):row.Date
     };
-    public static bool ConfirmedNumericTitle(string title)=>System.Text.RegularExpressions.Regex.IsMatch(title,@"^\d+(?:[,.\-–—:]\d+)*$");
+    public static bool ConfirmedNumericTitle(string title)=>System.Text.RegularExpressions.Regex.IsMatch(title,@"^\d+(?:[ ,.\-–—:/&_]+\d+)*$");
     public static bool NeedsInput(AudioMetadata row,string? manualTitle=null)=>IncompleteFields(row,manualTitle).Count>0;
     public static List<string> IncompleteFields(AudioMetadata row,string? manualTitle=null)
     {
@@ -75,7 +76,8 @@ public sealed class ManualMetadataResolver(IMetadataResolver inner,ManualResolut
         var loose=row.ConfirmedLooseTrack&&string.IsNullOrWhiteSpace(row.Album);
         if(MetadataQualityEvaluator.Invalid(row.Artist))fields.Add("Artist");
         if(!loose&&MetadataQualityEvaluator.InvalidAlbum(row.Album))fields.Add("Album");
-        if((MetadataQualityEvaluator.Invalid(row.Title)||MetadataQualityEvaluator.FilenameTitle(row))&&!((manualTitle==row.Title||row.Identification?.FieldSources.GetValueOrDefault("Title") is "FileManualOverride" or "FolderManualOverride")&&ConfirmedNumericTitle(row.Title)))fields.Add("Title");
+        var confirmed=row.ExplicitlyConfirmedTitle==row.Title&&!string.IsNullOrWhiteSpace(row.Title)&&row.Title.Length<=500&&!row.Title.Any(char.IsControl);
+        if(!confirmed&&(MetadataQualityEvaluator.Invalid(row.Title)||MetadataQualityEvaluator.FilenameTitle(row))&&!((manualTitle==row.Title||row.Identification?.FieldSources.GetValueOrDefault("Title") is "FileManualOverride" or "FolderManualOverride")&&ConfirmedNumericTitle(row.Title)))fields.Add("Title");
         if(row.Track==0&&!loose)fields.Add("Track number");
         return fields;
     }

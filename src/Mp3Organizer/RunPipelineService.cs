@@ -24,14 +24,20 @@ public sealed class RunPipelineService(ProgressRepository repository,string work
     }
     public int ApplyReady(IReadOnlyDictionary<string,string> targets,string reports,Action<string>? progress=null)
     {
+        progress?.Invoke("Preparing apply: checking metadata policy and confirmed album years...");
         MetadataPolicy.Migrate(repository,workspace,progress);
         ErrorCount=0;var count=0;var yearCorrections=new AlbumYearCorrectionService(repository,workspace);yearCorrections.Propagate();
         foreach(var pair in targets.OrderBy(x=>x.Key,StringComparer.OrdinalIgnoreCase))
         {
+            progress?.Invoke("Checking album corrections: "+pair.Value);
             yearCorrections.Reconcile(pair.Key,pair.Value,progress);
             var ready=new List<IndexedMusic>();
-            foreach(var item in repository.All().Where(x=>x.SourceRoot.Equals(pair.Key,StringComparison.OrdinalIgnoreCase)&&x.Status==ProcessingStatus.Ready).OrderBy(x=>x.CurrentPath,StringComparer.OrdinalIgnoreCase))
+            var pending=repository.All().Where(x=>x.SourceRoot.Equals(pair.Key,StringComparison.OrdinalIgnoreCase)&&x.Status==ProcessingStatus.Ready).OrderBy(x=>x.CurrentPath,StringComparer.OrdinalIgnoreCase).ToList();
+            progress?.Invoke($"Verifying {pending.Count} Ready source files before planning...");
+            var checkedCount=0;var verificationTimer=System.Diagnostics.Stopwatch.StartNew();
+            foreach(var item in pending)
             {
+                checkedCount++;if(verificationTimer.Elapsed.TotalSeconds>=2){progress?.Invoke($"Verifying source [{checkedCount}/{pending.Count}]: {item.CurrentPath}");verificationTimer.Restart();}
                 if(item.Effective.Identification?.Status=="Review"||ManualMetadataResolver.NeedsInput(item.Effective))
                 {repository.Save(item with{Status=ProcessingStatus.NeedsReview},"Ready metadata is unresolved; apply blocked");continue;}
                 try

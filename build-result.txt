@@ -1,1 +1,1 @@
-BUILD PASSED: offline compilation; warnings treated as errors. artifacts-numbered-review-titles. 273 tests passed, 0 failed. Numbered filename titles repaired before review for known artists; Enter/F, persistence, apply, manual custom titles and filename artist parsing verified. No live library writes.
+BUILD PASSED: offline compilation; warnings treated as errors. artifacts-explicit-title. 275 tests passed, 0 failed. Explicit manual title confirmation overrides placeholder heuristics for that exact nonempty value; persistence, drafts and apply tested. No live library writes.
