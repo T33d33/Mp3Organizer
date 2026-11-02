@@ -21,6 +21,7 @@ public sealed partial class ProgressRepository : IDisposable
             db.Query("CREATE TABLE IF NOT EXISTS llm_events (sequence INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL, event_utc TEXT NOT NULL, kind TEXT NOT NULL, source_path TEXT NOT NULL, detail TEXT NOT NULL)");
             db.Query("CREATE TABLE IF NOT EXISTS run_targets (source_root TEXT PRIMARY KEY COLLATE NOCASE, target TEXT NOT NULL)");
             db.Query("CREATE TABLE IF NOT EXISTS recognition_evidence (file_id TEXT PRIMARY KEY, recognition_confidence REAL NOT NULL, auto_recognized INTEGER NOT NULL, year_source TEXT NOT NULL, year_confidence REAL NOT NULL, year_enriched INTEGER NOT NULL, candidates_json TEXT NOT NULL, review_reasons_json TEXT NOT NULL)");
+            InitializeExclusions();
             db.Query("CREATE INDEX IF NOT EXISTS ix_music_status ON music_files(status)");db.Query("CREATE INDEX IF NOT EXISTS ix_music_sha ON music_files(sha256)");
             db.Query("BEGIN IMMEDIATE");
             try{InitializeFolders();InitializeSourcePlaylists();db.Query("PRAGMA user_version=4");db.Query("COMMIT");}
@@ -45,6 +46,7 @@ public sealed partial class ProgressRepository : IDisposable
     private static IndexedMusic Read(string?[] r)=>new(r[0]!,r[1]!,r[2]!,r[3]!,JsonFormat.Read<AudioMetadata>(r[4]!),JsonFormat.Read<AudioMetadata>(r[5]!),Enum.Parse<ProcessingStatus>(r[6]!),r[7],r[8]!);
     public void Save(IndexedMusic item,string reason)
     {
+        if(IsExcluded(item.CurrentPath))item=item with{Status=ProcessingStatus.Skipped,ErrorMessage=""};
         db.Query("BEGIN IMMEDIATE");
         try
         {

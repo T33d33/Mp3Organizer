@@ -12,15 +12,16 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
     public int Run()
     {
         var albumSetup=new AlbumSetupService(repository,workspace,console);
-        string? finishFolder=null;
+        string? finishFolder=null;bool allowGenericTitles=false;
         var queue=repository.All().Where(x=>x.Status==ProcessingStatus.NeedsReview).OrderBy(x=>x.CurrentPath,NaturalPathComparer.Instance).ToList();
         for(var position=0;position<queue.Count;position++)
         {
             var item=repository.Find(queue[position].Id)??throw new IOException("Review track is no longer indexed.");
+            if(repository.IsExcluded(item.CurrentPath))continue;
             var currentFolder=Path.GetDirectoryName(item.CurrentPath)!;
-            if(!string.Equals(finishFolder,currentFolder,StringComparison.OrdinalIgnoreCase))finishFolder=null;
+            if(!string.Equals(finishFolder,currentFolder,StringComparison.OrdinalIgnoreCase)){finishFolder=null;allowGenericTitles=false;}
             var folderLabel=Path.GetRelativePath(item.SourceRoot,currentFolder);
-            if(albumFirst&&!albumSetup.Ensure(item))return ManuallyReviewedCount;
+            if(albumFirst&&finishFolder==null&&!albumSetup.Ensure(item))return ManuallyReviewedCount;
             item=repository.Find(item.Id)??throw new IOException("Review track is no longer indexed.");
             var row=ReviewFilenameSuggestions.Apply(item.Effective);
             if(FilenameEncodingRepair.Title(row) is {} repairedTitle)
@@ -52,9 +53,16 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
                 console.Write("Album context:\nAlbum Artist: "+row.AlbumArtist+"\nAlbum: "+row.Album+"\nYear: "+row.Year+"\nTrack metadata:\nArtist: "+row.Artist+"\nTitle: "+row.Title+"\nTrack: "+row.Track);
                 for(var i=0;i<candidates.Count;i++)console.Write($"\n[{i+1}] Candidate\n{Display(candidates[i].Metadata)}");
                 console.Write((recommended>0?$"Recommended candidate: {recommended} (highest evidence score; not verified)\n[Enter] Save recommended candidate and continue | [1-{candidates.Count}] Select candidate":"No online candidates. [Enter] Save current metadata and continue")+"\n[M] Manual editing | [P] Play | [D] Defer | [/q] Stop");
-                console.Write($"[F] Finish ({folderLabel}) — accept as Enter for this folder only.");
+                console.Write($"[F] Finish ({folderLabel}) — accept as Enter, current folder only.");
+                console.Write($"[G] Finish ({folderLabel}) allowing generic titles (01 / Track 01), current folder only.");
+                console.Write($"[X] Permanently skip ({folderLabel}) only (no subfolders). Existing copies are not deleted.");
                 console.Write("[B] Edit album for this folder (Album Artist, Album, Year).");
-                Prompt(item.CurrentPath,"Action [Enter = save and next; M = edit fields] | [P] Play | [D] Defer | [/back] Previous file | [/q] Stop:");var command=finishFolder!=null?"":console.Read()?.Trim();if(command==null||command.Equals("/q",StringComparison.OrdinalIgnoreCase)||command.Equals("q",StringComparison.OrdinalIgnoreCase))return ManuallyReviewedCount;
+                Prompt(item.CurrentPath,"Action [Enter = save and next; M = edit fields] | [P] Play | [D] Defer | [X] Skip folder permanently | [/back] Previous file | [/q] Stop:");var command=finishFolder!=null?"":console.Read()?.Trim();if(command==null||command.Equals("/q",StringComparison.OrdinalIgnoreCase)||command.Equals("q",StringComparison.OrdinalIgnoreCase))return ManuallyReviewedCount;
+                if(command.Equals("X",StringComparison.OrdinalIgnoreCase))
+                {
+                    SkippedCount+=repository.ExcludeFolder(currentFolder);finishFolder=null;
+                    console.Write("Permanently excluded current folder only: "+currentFolder+". Source files and existing organized copies are unchanged.");break;
+                }
                 if(command.Equals("B",StringComparison.OrdinalIgnoreCase))
                 {
                     finishFolder=null;
@@ -66,9 +74,9 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
                     }
                     continue;
                 }
-                if(command.Equals("F",StringComparison.OrdinalIgnoreCase))
+                if(command.Equals("F",StringComparison.OrdinalIgnoreCase)||command.Equals("G",StringComparison.OrdinalIgnoreCase))
                 {
-                    finishFolder=currentFolder;console.Write($"Finishing ({folderLabel}) using Enter decisions.");command="";
+                    allowGenericTitles=command.Equals("G",StringComparison.OrdinalIgnoreCase);finishFolder=currentFolder;console.Write($"Finishing ({folderLabel}), current folder only. Generic titles: {(allowGenericTitles?"accepted":"normal checks")}.");command="";
                 }
                 if(command.Equals("/back",StringComparison.OrdinalIgnoreCase))
                 {
@@ -111,6 +119,14 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
                 Prompt(item.CurrentPath,"Confirm:");var confirm=console.Read()?.Trim();if(confirm==null||confirm.Equals("/q",StringComparison.OrdinalIgnoreCase))return ManuallyReviewedCount;albumDecision=confirm.Equals("ALBUM",StringComparison.OrdinalIgnoreCase);if(confirm!=""&&!confirm.Equals("YES",StringComparison.OrdinalIgnoreCase)&&!albumDecision)continue;
                 if(tags!=null&&confirm==""){console.Write("Source tag writing requires YES. Draft retained; no changes saved.");continue;}
                 }
+                if(finishFolder!=null&&allowGenericTitles&&MetadataQualityEvaluator.Invalid(selected.Title))
+                    selected=selected with{Title=Path.GetFileNameWithoutExtension(item.CurrentPath)};
+                string CleanText(string text)=>System.Text.RegularExpressions.Regex.Replace(new string(text.Select(c=>char.IsControl(c)?' ':c).ToArray()),@"\s+"," ").Trim();
+                var cleaned=selected with{Artist=CleanText(selected.Artist),AlbumArtist=CleanText(selected.AlbumArtist),Album=CleanText(selected.Album),Title=CleanText(selected.Title)};
+                if(cleaned!=selected)console.Write("Removed hidden control characters / excess whitespace from proposed metadata.");
+                selected=cleaned;
+                var tooLong=new[]{("Artist",selected.Artist),("Album Artist",selected.AlbumArtist),("Album",selected.Album),("Title",selected.Title)}.Where(x=>x.Item2.Length>500).Select(x=>x.Item1).ToArray();
+                if(tooLong.Length>0){console.Write("Not saved; remains NeedsReview. Text exceeds 500 characters: "+string.Join(", ",tooLong)+". Use M/B to shorten it. Continuing review.");break;}
                 var actual=new TagLibMetadataReader(new ReadOnlySource()).Read(item.CurrentPath);if(actual.Error!=""||actual.Sha256!=item.Basic.Sha256){console.Write("File changed; scan before reviewing.");break;}
                 var store=new ManualResolutionStore(workspace,item.SourceRoot);var data=store.Load();var key="sha256:"+item.Basic.Sha256.ToLowerInvariant();
                 if(selectedCandidate&&albumFirst)
@@ -122,7 +138,7 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
                             data.Folders[entry.Key]=entry.Value with{ReviewFileIds=entry.Value.ReviewFileIds.Where(id=>id!=item.Id).ToArray()};
                 }
                 // Empty strings explicitly clear text; zero represents a deliberate unknown number.
-                var value=new ManualOverride{ExplicitlyConfirmedTitle=manual||row.ExplicitlyConfirmedTitle==selected.Title?selected.Title:null,LastKnownPath=item.CurrentPath,ConfirmedLooseTrack=string.IsNullOrWhiteSpace(selected.Album),Artist=selected.Artist,AlbumArtist=selected.AlbumArtist,Album=selected.Album,Title=selected.Title,TrackNumber=selected.Track,Year=selected.Year,YearTrackOnly=!albumDecision,DiscNumber=selected.Disc==0?null:selected.Disc};
+                var value=new ManualOverride{ExplicitlyConfirmedTitle=manual||(finishFolder!=null&&allowGenericTitles)||row.ExplicitlyConfirmedTitle==selected.Title?selected.Title:null,LastKnownPath=item.CurrentPath,ConfirmedLooseTrack=string.IsNullOrWhiteSpace(selected.Album),Artist=selected.Artist,AlbumArtist=selected.AlbumArtist,Album=selected.Album,Title=selected.Title,TrackNumber=selected.Track,Year=selected.Year,YearTrackOnly=!albumDecision,DiscNumber=selected.Disc==0?null:selected.Disc};
                 data.Files.TryGetValue(key,out var previousCandidate);
                 var acceptedCandidates=new Dictionary<string,TagMetadata>(previousCandidate?.AcceptedCandidateMetadata??new());
                 if(selectedCandidate||acceptedCandidates.ContainsKey(item.Id))acceptedCandidates[item.Id]=selected;
@@ -139,7 +155,7 @@ public sealed class CandidateReviewService(ProgressRepository repository,string 
                 var accepted=item with{Effective=updated,Status=needs?ProcessingStatus.NeedsReview:ProcessingStatus.Ready,ErrorMessage="",LastProcessedUtc=DateTime.UtcNow.ToString("O")};
                 if(tags!=null&&!needs)tags.WriteAndSave(accepted,true);else repository.Save(accepted,"Explicit review confirmation; track metadata saved");
                 if(albumDecision)new AlbumYearCorrectionService(repository,workspace).Propagate();
-                if(albumFirst)albumSetup.ReconcileArtist(accepted);
+                if(albumFirst&&finishFolder==null)albumSetup.ReconcileArtist(accepted);
                 reviewed.Add(item.Id);console.Write(needs?"Saved; NeedsReview — missing or invalid: "+string.Join(", ",ManualMetadataResolver.IncompleteFields(updated,selected.Title))+".":"Saved; Ready.");break;
             }
         }

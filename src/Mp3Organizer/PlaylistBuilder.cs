@@ -32,7 +32,7 @@ public sealed class PlaylistMapStore
             throw new IOException("Invalid normalized keys or next artist ID.");
         foreach (var artist in map.Artists.Values)
         {
-            if (artist.NextAlbumId < 1 || artist.NextAlbumId > 100 || artist.Albums.Values.Any(x => x.AlbumId < 1 || x.AlbumId >= artist.NextAlbumId || x.AlbumId > 99)
+            if (artist.NextAlbumId < 1 || artist.Albums.Values.Any(x => x.AlbumId < 1 || x.AlbumId >= artist.NextAlbumId)
                 || artist.Albums.Values.Select(x => x.AlbumId).Distinct().Count() != artist.Albums.Count
                 || artist.Albums.Keys.Any(x => x != MetadataNormalizer.Key(x))) throw new IOException("Invalid album IDs or identity keys.");
         }
@@ -82,9 +82,10 @@ public sealed class PlaylistBuilder
                 && !(first.Year>0&&tracks.Where(x=>MetadataNormalizer.Key(AlbumGrouper.Owner(x.Metadata))==group.Key.Owner&&MetadataNormalizer.Key(x.Metadata.Album)==MetadataNormalizer.Key(first.Album)).Select(x=>x.Metadata.Year).Distinct().Count()==1
                     &&artist.Albums.TryGetValue(MetadataNormalizer.Key(first.Album)+"|0",out album)))
             {
-                // Fixed two-digit album IDs make concatenated spoken codes unambiguous.
-                if (artist.NextAlbumId > 99) throw new IOException($"Artist {artist.DisplayName} has exhausted the 99 permanent album codes.");
-                album = new() { AlbumId = artist.NextAlbumId++, DisplayName = first.Album };
+                // Preserve legacy codes; larger IDs use a separated code format.
+                var nextAlbumId=checked(artist.NextAlbumId+1);
+                album = new() { AlbumId = artist.NextAlbumId, DisplayName = first.Album };
+                artist.NextAlbumId=nextAlbumId;
                 artist.Albums.Add(group.Key.Album, album);
             }
             Add(PlaylistNames.AlbumPath(artist, album), group.OrderBy(x => x.Metadata.Disc).ThenBy(x => x.Metadata.Track).ThenBy(x => x.RelativePath, StringComparer.Ordinal));

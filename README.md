@@ -148,7 +148,8 @@ Type the action and press **Enter**. Commands apply to the prompt currently disp
 | `B` | Edit Album Artist, Album and Year for the current immediate folder; review and confirm the scope before saving. |
 | `P` | Play the current audio file with its associated player. |
 | `D` | Defer this file; leave it NeedsReview and continue. This is not a permanent skip. |
-| `F` | Finish the current immediate folder using the same decisions as repeated Enter. Stops at the next folder, even within a larger album review scope. |
+| `F` | Finish the current folder using Enter decisions and normal title checks. No subfolders. |
+| `G` | Finish the current folder allowing generic titles such as 01 / Track 01; missing/invalid titles use the filename without extension. No subfolders. Other required fields are still checked. |
 | `/back` | Revisit the previous file in this review session. |
 | `/q` | Stop review; decisions already saved are retained. |
 
@@ -295,3 +296,39 @@ Review performance: current-track reads use indexed database lookups. An unchang
 Step 04 shows preparation, album-correction and source-verification progress before planning. Album decisions are loaded once and indexed by track for each correction pass, rather than reread per organized file. Source hash checks and copy validation still run; large libraries can still take time to verify.
 
 Manual title confirmation: M followed by confirmation records the exact accepted title, so real song names such as Title or Unknown are not rejected merely as placeholders. Blank or control-character titles remain invalid. The confirmation survives restart/apply and applies only to that exact value; automatic suggestions do not receive this override.
+
+### Permanently exclude a folder
+
+In track review, enter **X** to permanently skip the files directly in the current source folder **without its subfolders**. This includes indexed tracks already marked Ready, Error, or Processed. Sources and existing organized copies are not deleted. New files in the excluded folder are ignored by subsequent scans. Exclusions are saved in this workspace and survive restart and ordinary progress resets. B, M, F, D and /back retain their existing behavior.
+
+To exclude a folder before review (or choose a parent folder), use PowerShell from the project folder:
+
+```powershell
+.\Mp3Organizer.cmd exclude-folder 'E:\Mp3-Ai-test\soundtracki\Blood\all soundsrff\sounds' --workspace 'E:\Mp3-Ai-test-workspace'
+```
+
+List saved exclusions with `excluded-folders --workspace 'E:\Mp3-Ai-test-workspace'`. Undo one using `include-folder 'FULL FOLDER PATH' --workspace 'E:\Mp3-Ai-test-workspace'`, then scan again. Undo returns previously skipped indexed tracks to pending analysis; a separately excluded parent or child folder remains excluded. Exclusions belong to the workspace: creating a completely new workspace does not inherit them.
+
+Review saves remove hidden control characters and collapse excess whitespace in proposed text metadata, including filename-derived titles accepted with G. Source filenames are unchanged. A field longer than 500 characters leaves the track NeedsReview with the field named, and review continues instead of aborting.
+
+Album playlists support more than 99 albums per artist. Existing codes for albums 1–99 remain unchanged; subsequent albums use separated codes such as A123-100 (artist 123, album 100), also recorded in playlist-index.csv. No mapping reset is needed.
+
+### Repair inherited soundtrack albums
+
+Run **Repair-Soundtrack-Albums.cmd** from the project folder. This includes Ready and Processed tracks even when 03.Review reports zero pending files. It finds soundtrack folders whose saved album decision belongs to a parent folder and opens album editing once per direct folder. Confirm Album Artist, Album, and optional Year. Existing track Artist, Title, Track number and processing status are retained. /q stops; rerun the repair launcher to resume. /cancel leaves that folder for a later repair run.
+
+After confirming the folder albums, run **04.Apply-Reviewed.cmd** to relocate managed organized copies and regenerate playlists. Do not reset the library. The repair launcher itself changes saved album decisions, not source files or organized audio. It does not reopen unrelated folders with their own album decisions.
+
+New album setup applies only to the immediate folder. An inherited parent decision now requires a local album confirmation before track review can proceed; F/G do not authorize another folder's album setup.
+
+### Repair any individual album folder
+
+Run **Repair-Folder-Album.cmd** and paste the full original source-folder path when asked. Choose the folder containing the audio files under E:\Mp3-Ai-test, not its organized copy. Press Enter at the path prompt to cancel.
+
+Alternatively, from PowerShell in the project folder:
+
+```powershell
+.\Repair-Folder-Album.cmd 'E:\Mp3-Ai-test\soundtracki\Wiedźmin OST'
+```
+
+This opens Album Artist, Album and optional Year for the selected folder, even if already Processed or previously corrected. Only direct files are included; child folders and permanently ignored tracks are excluded. Track titles, artists, numbers and processing status are preserved. Enter keeps a suggested field; /clear clears; /back returns to the previous field; /cancel or /q exits without saving. Confirm the album summary to save, then run **04.Apply-Reviewed.cmd** to update organized copies and playlists. The soundtrack repair launcher remains available for inherited decisions across its existing scope.

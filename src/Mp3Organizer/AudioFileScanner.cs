@@ -5,7 +5,7 @@ public sealed class AudioFileScanner
     public static readonly HashSet<string> Extensions = new(StringComparer.OrdinalIgnoreCase) { ".mp3", ".flac", ".m4a", ".aac", ".ogg", ".wav", ".wma" };
     public List<string> Errors { get; } = new();
     public List<string> Playlists { get; } = new();
-    public IReadOnlyList<string> Scan(string root, Action<int,string>? progress = null)
+    public IReadOnlyList<string> Scan(string root, Action<int,string>? progress = null, Func<string,bool>? excluded = null)
     {
         Errors.Clear();Playlists.Clear();
         PathSafetyGuard.NoLinks(root);
@@ -24,6 +24,7 @@ public sealed class AudioFileScanner
                     var attributes = File.GetAttributes(entry);
                     if ((attributes & FileAttributes.ReparsePoint) != 0) { Errors.Add($"Skipped link: {entry}"); continue; }
                     if ((attributes & FileAttributes.Directory) != 0) Visit(entry);
+                    else if(excluded?.Invoke(entry)==true)continue;
                     else if (Extensions.Contains(Path.GetExtension(entry))) { files.Add(entry); progress?.Invoke(files.Count,directory); }
                     else if(SourcePlaylistReader.Extensions.Contains(Path.GetExtension(entry)))Playlists.Add(entry);
                 }

@@ -7,7 +7,7 @@ public sealed record PlaylistIndexEntry(string Code, string Type, string Artist,
 public static class PlaylistNames
 {
     public static string ArtistCode(ArtistIdentity artist) => artist.ArtistId.ToString(CultureInfo.InvariantCulture);
-    public static string AlbumCode(ArtistIdentity artist, AlbumIdentity album) => ArtistCode(artist) + album.AlbumId.ToString("00", CultureInfo.InvariantCulture);
+    public static string AlbumCode(ArtistIdentity artist, AlbumIdentity album) => album.AlbumId<100 ? ArtistCode(artist) + album.AlbumId.ToString("00", CultureInfo.InvariantCulture) : "A"+ArtistCode(artist)+"-"+album.AlbumId.ToString(CultureInfo.InvariantCulture);
     public static string ArtistPath(ArtistIdentity artist) => Path.Combine("_Playlists", "Artists", $"Code {ArtistCode(artist)} - {TargetPathBuilder.SafeName(artist.DisplayName)}.m3u8");
     public static string AlbumPath(ArtistIdentity artist, AlbumIdentity album) => Path.Combine("_Playlists", "Albums", $"Code {AlbumCode(artist, album)} - {TargetPathBuilder.SafeName(artist.DisplayName)} - {TargetPathBuilder.SafeName(album.DisplayName)}.m3u8");
 }

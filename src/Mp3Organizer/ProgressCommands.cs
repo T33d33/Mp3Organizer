@@ -3,7 +3,7 @@ namespace Mp3Organizer;
 
 public static class ProgressCommands
 {
-    public static bool Handles(string[] args)=>args.Length>0&&(args[0] is "run" or "review" or "scan" or "status" or "reset-file" or "reset-folder" or "reset-errors" or "reset-review" or "reset-progress" or "reset-all"||args[0]=="analyze"&&args.Contains("--limit"));
+    public static bool Handles(string[] args)=>args.Length>0&&(args[0] is "repair-folder" or "repair-albums" or "exclude-folder" or "include-folder" or "excluded-folders" or "run" or "review" or "scan" or "status" or "reset-file" or "reset-folder" or "reset-errors" or "reset-review" or "reset-progress" or "reset-all"||args[0]=="analyze"&&args.Contains("--limit"));
     public static int Run(string[] args)
     {
         var command=args[0];var workspace=Path.GetFullPath(Environment.GetEnvironmentVariable("MP3ORGANIZER_WORKSPACE")??"workspace");
@@ -22,7 +22,7 @@ public static class ProgressCommands
             case "--offline":offline=true;break;
             default:if(args[i].StartsWith("--"))throw new ArgumentException("Unknown or incomplete progress option: "+args[i]);paths.Add(args[i]);break;
         }
-        var expected=command is "scan" or "reset-file" or "reset-folder"?1:0;
+        var expected=command is "repair-folder" or "repair-albums" or "exclude-folder" or "include-folder" or "scan" or "reset-file" or "reset-folder"?1:0;
         if(paths.Count!=expected)throw new ArgumentException("Incorrect arguments. Incremental analyze uses analyze --limit N without a source path; run scan first.");
         if(force&&command!="scan"||limit>0&&command is not ("analyze" or "run")||(online||offline||reports!=null)&&command is not ("analyze" or "run")||online&&offline)throw new ArgumentException("Options do not apply to this command.");
         if(writeTags&&command is not ("analyze" or "review" or "run"))throw new ArgumentException("--write-tags applies to analyze --limit and review.");
@@ -40,6 +40,34 @@ public static class ProgressCommands
         using var gate=new FileStream(lockPath,FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None);
         using var repository=new ProgressRepository(workspace);
         foreach(var source in repository.All().Select(x=>x.SourceRoot).Distinct(StringComparer.OrdinalIgnoreCase))PathSafetyGuard.Separate(source,workspace);
+        if(command=="excluded-folders"){foreach(var folder in repository.ExcludedFolders)Console.WriteLine(folder);return 0;}
+        if(command=="exclude-folder"){Console.WriteLine("Skipped indexed files: "+repository.ExcludeFolder(paths[0]));Console.WriteLine("Files directly in this folder excluded from future scans and processing; subfolders remain active. Existing copies are not deleted.");return 0;}
+        if(command=="include-folder"){repository.IncludeFolder(paths[0]);Console.WriteLine("Exclusion removed. Scan this folder again to resume processing.");return 0;}
+        if(command=="repair-folder")
+        {
+            if(Console.IsInputRedirected)throw new IOException("repair-folder requires an interactive terminal.");
+            var result=new FolderRepairService(repository,workspace,new ReviewConsole()).Run(paths[0]);
+            if(result)Console.WriteLine("Saved. Run 04.Apply-Reviewed.cmd to correct organized copies and playlists.");
+            return 0;
+        }
+        if(command=="repair-albums")
+        {
+            if(Console.IsInputRedirected)throw new IOException("repair-albums requires an interactive terminal.");
+            var root=PathSafetyGuard.Canonical(paths[0]);
+            Console.WriteLine("ALBUM REPAIR — processed tracks are included. Only inherited parent album decisions are listed. Song edits and processing status are preserved. /q stops; rerun to resume.");
+            var groups=repository.All().Where(x=>PathSafetyGuard.Within(x.CurrentPath,root)&&x.Status is ProcessingStatus.Processed or ProcessingStatus.Ready or ProcessingStatus.NeedsReview).GroupBy(x=>Path.GetDirectoryName(x.CurrentPath)!,StringComparer.OrdinalIgnoreCase).OrderBy(x=>x.Key,NaturalPathComparer.Instance).ToList();
+            var saved=0;
+            foreach(var group in groups)
+            {
+                var data=new ManualResolutionStore(workspace,group.First().SourceRoot).Load();
+                var inherited=group.Any(item=>data.Folders.Values.Any(v=>v.AlbumSetupConfirmed&&v.ReviewFileIds?.Contains(item.Id)==true&&!v.LastKnownPath.Equals(group.Key,StringComparison.OrdinalIgnoreCase)));
+                if(!inherited)continue;
+                Console.WriteLine("Repair folder: "+group.Key+" ("+group.Count()+" tracks)");
+                var edit=new FolderAlbumEditor(repository,workspace,new ReviewConsole()).Edit(group.First());
+                if(edit.Stop)break;if(edit.Saved)saved++;
+            }
+            Console.WriteLine("Album folders repaired: "+saved+". Run 04.Apply-Reviewed.cmd to correct organized copies and playlists. No song review is needed for already processed tracks.");return 0;
+        }
         var tagWriter=new Mp3TagWriteService(workspace,repository);tagWriter.Recover();
         MetadataPolicy.Migrate(repository,workspace,Console.WriteLine);
         if(command=="review")

@@ -26,7 +26,7 @@ public static partial class TestRunner
         var played=0;var input=new GuidedReviewInput("/back","","/back","P","M","","Corrected title","","","","","","/q");
         Equal(1,new CandidateReviewService(repo,ws,input,_=>played++).Run());Equal(1,played);
         var rows=repo.All().OrderBy(x=>x.CurrentPath).ToArray();Equal("Corrected title",rows[0].Effective.Title);Equal(ProcessingStatus.NeedsReview,rows[1].Status);
-        True(input.Output.Any(x=>x.Contains("[P] Play | [D] Defer | [/back] Previous file | [/q] Stop:")));
+        True(input.Output.Any(x=>x.Contains("[P] Play | [D] Defer | [X] Skip folder permanently | [/back] Previous file | [/q] Stop:")));
         True(input.Output.Any(x=>x.Contains("first file in this review session")));
     }
     static void CandidateModeNumbersAndConfirmation()

@@ -1,6 +1,6 @@
 # LLM diagnostics and counters
 
-Use `artifacts-explicit-title/Mp3Organizer.dll`. Command syntax and identification decisions are unchanged.
+Use `artifacts-repair-any-folder/Mp3Organizer.dll`. Command syntax and identification decisions are unchanged.
 
 Incremental `analyze --limit N` now prints:
 

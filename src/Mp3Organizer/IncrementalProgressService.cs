@@ -22,7 +22,7 @@ public sealed class IncrementalProgressService(ProgressRepository repository,Fun
     public IncrementalScanResult Scan(string source,bool force=false,Action<string>? progress=null)
     {
         source=PathSafetyGuard.Canonical(source);PathSafetyGuard.Separate(source,Path.GetDirectoryName(repository.DatabasePath)!);
-        var scanner=new AudioFileScanner();var paths=scanner.Scan(source);var pathSet=paths.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var scanner=new AudioFileScanner();var paths=scanner.Scan(source,excluded:repository.IsExcluded);var pathSet=paths.ToHashSet(StringComparer.OrdinalIgnoreCase);
         var known=repository.All();var byPath=known.ToDictionary(x=>x.CurrentPath,StringComparer.OrdinalIgnoreCase);
         var missing=known.Where(x=>x.SourceRoot.Equals(source,StringComparison.OrdinalIgnoreCase)&&!pathSet.Contains(x.CurrentPath)&&!File.Exists(x.CurrentPath)).ToList();
         var added=0;var updated=0;var unchanged=0;var errors=new List<string>(scanner.Errors);
