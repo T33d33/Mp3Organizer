@@ -3,13 +3,14 @@ namespace Mp3Organizer;
 
 public static class ProgressCommands
 {
-    public static bool Handles(string[] args)=>args.Length>0&&(args[0] is "repair-folder" or "repair-albums" or "exclude-folder" or "include-folder" or "excluded-folders" or "run" or "review" or "scan" or "status" or "reset-file" or "reset-folder" or "reset-errors" or "reset-review" or "reset-progress" or "reset-all"||args[0]=="analyze"&&args.Contains("--limit"));
+    public static bool Handles(string[] args)=>args.Length>0&&(args[0] is "repair-tracks" or "repair-folder" or "repair-albums" or "exclude-folder" or "include-folder" or "excluded-folders" or "run" or "review" or "scan" or "status" or "reset-file" or "reset-folder" or "reset-errors" or "reset-review" or "reset-progress" or "reset-all"||args[0]=="analyze"&&args.Contains("--limit"));
     public static int Run(string[] args)
     {
         var command=args[0];var workspace=Path.GetFullPath(Environment.GetEnvironmentVariable("MP3ORGANIZER_WORKSPACE")??"workspace");
-        var paths=new List<string>();var force=false;var writeTags=false;var online=false;var offline=false;var limit=0;string? reports=null;string? target=null;bool? codex=null;
+        var paths=new List<string>();var force=false;var writeTags=false;var online=false;var offline=false;var limit=0;string? reports=null;string? target=null;bool? codex=null;string? filesystemNaming=null;
         for(var i=1;i<args.Length;i++)switch(args[i])
         {
+            case "--filesystem-naming" when i+1<args.Length:filesystemNaming=new FileSystemNaming(args[++i]).Mode;break;
             case "--workspace" when i+1<args.Length:workspace=Path.GetFullPath(args[++i]);break;
             case "--reports" when i+1<args.Length:reports=Path.GetFullPath(args[++i]);break;
             case "--limit" when i+1<args.Length:if(!int.TryParse(args[++i],out limit)||limit<1)throw new ArgumentException("--limit must be a positive integer.");break;
@@ -22,7 +23,8 @@ public static class ProgressCommands
             case "--offline":offline=true;break;
             default:if(args[i].StartsWith("--"))throw new ArgumentException("Unknown or incomplete progress option: "+args[i]);paths.Add(args[i]);break;
         }
-        var expected=command is "repair-folder" or "repair-albums" or "exclude-folder" or "include-folder" or "scan" or "reset-file" or "reset-folder"?1:0;
+        if(filesystemNaming!=null&&command!="run")throw new ArgumentException("--filesystem-naming applies only to run.");
+        var expected=command is "repair-tracks" or "repair-folder" or "repair-albums" or "exclude-folder" or "include-folder" or "scan" or "reset-file" or "reset-folder"?1:0;
         if(paths.Count!=expected)throw new ArgumentException("Incorrect arguments. Incremental analyze uses analyze --limit N without a source path; run scan first.");
         if(force&&command!="scan"||limit>0&&command is not ("analyze" or "run")||(online||offline||reports!=null)&&command is not ("analyze" or "run")||online&&offline)throw new ArgumentException("Options do not apply to this command.");
         if(writeTags&&command is not ("analyze" or "review" or "run"))throw new ArgumentException("--write-tags applies to analyze --limit and review.");
@@ -43,6 +45,11 @@ public static class ProgressCommands
         if(command=="excluded-folders"){foreach(var folder in repository.ExcludedFolders)Console.WriteLine(folder);return 0;}
         if(command=="exclude-folder"){Console.WriteLine("Skipped indexed files: "+repository.ExcludeFolder(paths[0]));Console.WriteLine("Files directly in this folder excluded from future scans and processing; subfolders remain active. Existing copies are not deleted.");return 0;}
         if(command=="include-folder"){repository.IncludeFolder(paths[0]);Console.WriteLine("Exclusion removed. Scan this folder again to resume processing.");return 0;}
+        if(command=="repair-tracks")
+        {
+            if(Console.IsInputRedirected)throw new IOException("repair-tracks requires an interactive terminal.");
+            Console.WriteLine("Repaired tracks: "+new TrackRepairService(repository,workspace,new ReviewConsole()).Run(paths[0]));return 0;
+        }
         if(command=="repair-folder")
         {
             if(Console.IsInputRedirected)throw new IOException("repair-folder requires an interactive terminal.");
@@ -132,7 +139,7 @@ public static class ProgressCommands
             var analyzer=new IncrementalProgressService(repository,tagWriter:writeTags?tagWriter:null,codexState:codexState,continueWithoutCodex:ContinueWithoutCodex);
             var count=analyzer.AnalyzeAsync(limit,Resolver,progress.Write).GetAwaiter().GetResult();
             Console.WriteLine("Analyzed this batch: "+count);
-            if(pipeline!=null&&!analyzer.StoppedForCodex)Console.WriteLine("Processed this run: "+pipeline.ApplyReady(targets!,reports!,progress.Write));
+            if(pipeline!=null&&!analyzer.StoppedForCodex)Console.WriteLine("Processed this run: "+pipeline.ApplyReady(targets!,reports!,progress.Write,filesystemNaming));
             var all=repository.All();PrintStatus(all);
             if(reports!=null)
                 foreach(var group in all.GroupBy(x=>x.SourceRoot,StringComparer.OrdinalIgnoreCase))

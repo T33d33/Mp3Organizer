@@ -42,6 +42,21 @@ public sealed class FilenameMetadataFallback
         var artist = MetadataQualityEvaluator.Invalid(file.Artist) ? "" : file.Artist;
         var album = MetadataQualityEvaluator.InvalidAlbum(file.Album) ? "" : file.Album;
         var title = file.Title; var track = file.Track;
+        // Preserve the artist before an embedded track number. Never reparse the
+        // remaining song title as Artist - Title after stripping that prefix.
+        var structured=Regex.Match(normalizedStem,@"^(?<artist>.+?)\s+-\s+(?<track>\d{1,3})\s+-\s+(?<title>.+)$");
+        if(structured.Success&&uint.TryParse(structured.Groups["track"].Value,out var structuredTrack)&&structuredTrack>0)
+        {
+            if(artist=="")artist=structured.Groups["artist"].Value.Trim();
+            if(track==0)track=structuredTrack;
+            if(MetadataQualityEvaluator.Invalid(title)||MetadataQualityEvaluator.FilenameTitle(file)||MetadataNormalizer.Key(title)==MetadataNormalizer.Key(stem))
+            {
+                title=structured.Groups["title"].Value.Trim();
+                var tail=title.LastIndexOf(" - ",StringComparison.Ordinal);
+                if(tail>0&&album!=""&&MetadataNormalizer.Key(title[(tail+3)..])==MetadataNormalizer.Key(album))title=title[..tail].Trim();
+            }
+            return file with{Artist=artist,TrackArtists=artist==file.Artist?file.TrackArtists:[artist],Title=title,Track=track};
+        }
         var filenameHint=FilenameTrackParser.Parse(normalizedName);
         if(track==0&&filenameHint!=null)track=filenameHint.Number;
         var filenameLike=artist==""&&SplitNames(normalizedStem).Length==2&&MetadataNormalizer.Key(Normalize(title))==MetadataNormalizer.Key(Normalize(stem));

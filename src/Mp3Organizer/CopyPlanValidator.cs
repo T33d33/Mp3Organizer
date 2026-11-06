@@ -15,6 +15,8 @@ public sealed class CopyPlanValidator
             if(!string.Equals(manual.FilePath,plan.ManualFilePath,StringComparison.OrdinalIgnoreCase)||manual.Revision()!=plan.ManualFileRevision)throw new IOException("Manual resolutions changed since planning; create a new plan.");
         }
         var layoutState=ManagedTarget.Check(target, source);
+        _=new FileSystemNaming(plan.FileSystemNaming);
+        if(layoutState!=null&&layoutState.FileSystemNaming!=plan.FileSystemNaming)throw new IOException("Plan naming mode differs from target.");
         if(layoutState!=null&&layoutState.KeepSourceFolders!=plan.KeepSourceFolders)throw new IOException("Plan output layout differs from target.");
         if(plan.ProgressWorkspace!=""&&OutputLayout.KeepFolders(plan.ProgressWorkspace)!=plan.KeepSourceFolders)throw new IOException("Output layout changed since planning.");
         if (plan.Conflicts.Count != 0) throw new IOException("Plan has blocking conflicts; inspect conflicts.csv and create a new plan.");
@@ -59,7 +61,7 @@ public sealed class CopyPlanValidator
             if (op.Action == "AlreadyPresent")
             {
                 using var existing = new ReadOnlySource().OpenRead(path);
-                if (Convert.ToHexString(SHA256.HashData(existing)) != op.Metadata.Sha256) throw new IOException("Existing destination does not match source.");
+                if (Convert.ToHexString(SHA256.HashData(existing)) != (plan.TargetMetadata.TryGetValue(op.RelativePath,out var savedTarget)?savedTarget.Sha256:op.Metadata.Sha256)) throw new IOException("Existing destination does not match source.");
             }
         }
         var state = ManagedTarget.Check(target, source);
@@ -70,7 +72,7 @@ public sealed class CopyPlanValidator
             var path = PathSafetyGuard.Destination(target,entry.Key,source);
             if (!AudioFileScanner.Extensions.Contains(Path.GetExtension(path))) throw new IOException("Invalid effective-metadata target path.");
             var copy = plan.Operations.FirstOrDefault(x => string.Equals(x.RelativePath,entry.Key,StringComparison.OrdinalIgnoreCase));
-            if (copy != null && (copy.Metadata.Sha256 != entry.Value.Sha256 || copy.Metadata.Size != entry.Value.Size)) throw new IOException("Effective metadata does not match planned audio.");
+            if (copy != null && copy.Action=="Copy" && (copy.Metadata.Sha256 != entry.Value.Sha256 || copy.Metadata.Size != entry.Value.Size)) throw new IOException("Effective metadata does not match planned audio.");
             if (copy == null && !File.Exists(path)) throw new IOException("Effective metadata references missing audio.");
         }
         var owned = state?.Playlists.ToHashSet(StringComparer.OrdinalIgnoreCase) ?? new();

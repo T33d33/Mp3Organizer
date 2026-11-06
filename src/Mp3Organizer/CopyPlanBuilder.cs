@@ -2,14 +2,16 @@ namespace Mp3Organizer;
 
 public sealed class CopyPlanBuilder
 {
-    public CopyPlan Build(string source, string target, IMetadataResolver? resolver = null, bool identifyAll = false, Action<string>? progress = null,IReadOnlyList<AudioMetadata>? readyInventory=null,string? workspace=null)
+    public CopyPlan Build(string source, string target, IMetadataResolver? resolver = null, bool identifyAll = false, Action<string>? progress = null,IReadOnlyList<AudioMetadata>? readyInventory=null,string? workspace=null,string? filesystemNaming=null)
     {
         source = PathSafetyGuard.Canonical(source); target = PathSafetyGuard.Canonical(target);
         PathSafetyGuard.Separate(source, target);
         var keepFolders=OutputLayout.KeepFolders(workspace);
         var existingState=ManagedTarget.Check(target, source);
+        var naming=new FileSystemNaming(filesystemNaming??existingState?.FileSystemNaming??"unicode");
+        if(existingState!=null&&existingState.FileSystemNaming!=naming.Mode)throw new IOException("Filesystem naming differs from target. Regenerate in a fresh target and workspace; do not mix naming modes.");
         if(existingState!=null&&existingState.KeepSourceFolders!=keepFolders)throw new IOException("Target uses a different output layout. Use a fresh matching workspace and target.");
-        var plan = new CopyPlan { MetadataPolicyVersion=2,Source = source, Target = target, ExpectedTargetSnapshot = TargetSnapshot.Hash(target),SelectedInventoryOnly=readyInventory!=null,ProgressWorkspace=workspace!=null&&File.Exists(Path.Combine(workspace,"music-organizer.db"))?workspace:"" };
+        var plan = new CopyPlan { FileSystemNaming=naming.Mode, MetadataPolicyVersion=2,Source = source, Target = target, ExpectedTargetSnapshot = TargetSnapshot.Hash(target),SelectedInventoryOnly=readyInventory!=null,ProgressWorkspace=workspace!=null&&File.Exists(Path.Combine(workspace,"music-organizer.db"))?workspace:"" };
         var scanner = new AudioFileScanner();
         plan.KeepSourceFolders=keepFolders;
         var reader = new TagLibMetadataReader(new ReadOnlySource());
@@ -37,7 +39,7 @@ public sealed class CopyPlanBuilder
         var tracks = existing.Select(x => new CopyOperation(x, Path.GetRelativePath(target, x.FullPath), "Existing")).ToDictionary(x => x.RelativePath, StringComparer.OrdinalIgnoreCase);
         foreach (var row in selection.Selected)
         {
-            var canonical=existing.Where(x=>x.Sha256==row.Sha256&&x.Size==row.Size&&row.Sha256.Length==64).OrderBy(x=>x.FullPath,StringComparer.OrdinalIgnoreCase).FirstOrDefault();
+            var canonical=existing.Where(x=>(x.SourceSha256==""?x.Sha256:x.SourceSha256)==row.Sha256&&(x.SourceSha256==""?x.Size:x.SourceSize)==row.Size&&row.Sha256.Length==64).OrderBy(x=>x.FullPath,StringComparer.OrdinalIgnoreCase).FirstOrDefault();
             if(canonical!=null&&!keepFolders)
             {
                 var sharedPath=Path.GetRelativePath(target,canonical.FullPath);
@@ -47,6 +49,8 @@ public sealed class CopyPlanBuilder
             var relative = keepFolders?Path.GetRelativePath(source,row.FullPath):TargetPathBuilder.Build(row);
             if(keepFolders&&(relative.Split(Path.DirectorySeparatorChar)[0].Equals("_Playlists",StringComparison.OrdinalIgnoreCase)||relative.Split(Path.DirectorySeparatorChar)[0].Equals("_Playlist-Folder",StringComparison.OrdinalIgnoreCase)||relative.Split(Path.DirectorySeparatorChar)[0].StartsWith(".mp3organizer",StringComparison.OrdinalIgnoreCase)))throw new IOException("Source folder collides with reserved output paths: "+relative);
             if(keepFolders&&File.Exists(Path.Combine(target,relative))&&(!tracks.TryGetValue(relative,out var original)||original.Metadata.Sha256!=row.Sha256))throw new IOException("Original path already contains different audio: "+relative);
+            var originalRelative=relative;
+            relative=naming.RelativePath(relative);
             var initial = relative;
             var suffix = 1;
             while (occupied.Contains(relative) || Directory.Exists(Path.Combine(target, relative)) || (File.Exists(Path.Combine(target, relative)) && (!tracks.TryGetValue(relative, out var found) || found.Metadata.Sha256 != row.Sha256)))
@@ -57,7 +61,7 @@ public sealed class CopyPlanBuilder
             if (relative != initial) plan.ResolvedConflicts.Add($"Filename collision: {initial}; retained as {relative}");
             var destination = PathSafetyGuard.Destination(target, relative, source);
             if (destination.Length >= 240 || relative.Split(Path.DirectorySeparatorChar).Any(x => x.Length > 180)) plan.Conflicts.Add("Target path exceeds conservative Windows limits: " + relative);
-            var operation = new CopyOperation(row, relative, File.Exists(destination) ? "AlreadyPresent" : "Copy");
+            var operation = new CopyOperation(row, relative, File.Exists(destination) ? "AlreadyPresent" : "Copy") {OriginalRelativePath=originalRelative,TagChanges=File.Exists(destination)?[]:TargetTagWriter.Plan(reader.Read(row.FullPath),row)};
             plan.Operations.Add(operation);
             tracks[relative] = operation;
         }
@@ -73,7 +77,7 @@ public sealed class CopyPlanBuilder
         return plan;
     }
 }
-public sealed record ManagedTargetState(int SchemaVersion, string Source, List<string> Playlists, bool IndexManaged = false, bool MetadataManaged = false,bool KeepSourceFolders=false);
+public sealed record ManagedTargetState(int SchemaVersion, string Source, List<string> Playlists, bool IndexManaged = false, bool MetadataManaged = false,bool KeepSourceFolders=false,string FileSystemNaming="unicode");
 public static class ManagedTarget
 {
     public const string Marker = ".mp3organizer.json";

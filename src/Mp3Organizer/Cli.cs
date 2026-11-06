@@ -12,12 +12,13 @@ public static class Program
     public static int Run(string[] args)
     {
         if (args.Length == 0 || args[0] is "--help" or "-h") { Help(); return args.Length == 0 ? 2 : 0; }
+        if(args[0]=="validate-playlists") {if(args.Length!=2)throw new ArgumentException("Use validate-playlists <target>.");return new PlaylistValidator().Report(args[1],Console.WriteLine);}
         if(args[0]=="output-layout")return OutputLayout.Configure(args);
         if(ProgressCommands.Handles(args))return ProgressCommands.Run(args);
         var command = args[0];
         var positionals = new List<string>();
         string reports = Path.GetFullPath("reports");
-        string? planFile = null;
+        string? planFile = null; string? filesystemNaming=null;
         var dryRun = false;
         var online = false; var offline = false; var identifyAll = false;
         string? cachePath = null;
@@ -27,6 +28,7 @@ public static class Program
         {
             switch (args[i])
             {
+                case "--filesystem-naming" when i+1<args.Length: filesystemNaming=new FileSystemNaming(args[++i]).Mode;break;
                 case "--reports" when i + 1 < args.Length: reports = Path.GetFullPath(args[++i]); break;
                 case "--plan" when i + 1 < args.Length: planFile = Path.GetFullPath(args[++i]); break;
                 case "--dry-run": dryRun = true; break;
@@ -45,6 +47,7 @@ public static class Program
                     positionals.Add(args[i]); break;
             }
         }
+        if(filesystemNaming!=null&&command!="plan")throw new ArgumentException("--filesystem-naming applies to plan or run; apply uses the saved plan.");
         if(command=="doctor")
         {
             if(positionals.Count!=0||online||identifyAll||rebuild||refresh||onlyUnresolved||editManual||dryRun||planFile!=null)throw new ArgumentException("Use doctor [--offline] [--workspace <directory>] [--cache <path>].");
@@ -129,7 +132,7 @@ public static class Program
                 using var repository=new ProgressRepository(workspace);
                 planResolver=new ManualMetadataResolver(new ProgressMetadataResolver(planResolver,repository.All()),identification.ManualStore);
             }
-            var plan = new CopyPlanBuilder().Build(source, target,planResolver,identifyAll||rebuild,progress.Write,workspace:workspace);
+            var plan = new CopyPlanBuilder().Build(source, target,planResolver,identifyAll||rebuild,progress.Write,workspace:workspace,filesystemNaming:filesystemNaming);
             if(manualRevision!=identification.ManualStore.Revision())throw new IOException("Manual resolutions changed while building the plan; run plan again.");
             plan.ManualFilePath=identification.ManualStore.FilePath;plan.ManualFileRevision=manualRevision;
             var saved = new CopyPlanStore().Save(plan, reports);
@@ -149,5 +152,5 @@ public static class Program
         Console.WriteLine(dryRun ? $"Dry run validated: {savedPlan.Operations.Count(x => x.Action == "Copy")} copies and {savedPlan.Playlists.Count} playlists. No files written." : "Apply completed; source untouched. Managed playlist replacements were backed up.");
         return 0;
     }
-    private static void Help() => Console.WriteLine("Output layout: output-layout folders|albums --workspace <path> (existing review controls retained)\nNormal workflow: scan <source>, then run --online --workspace <directory>\nMp3Organizer run [--online|--offline] [--workspace <directory>] [--target <directory>] [--reports <directory>] [--codex|--no-codex] [--write-tags] [--limit N]\nMp3Organizer scan <source> [--force] [--workspace <directory>]\nMp3Organizer review [--workspace <directory>] [--write-tags]\nMp3Organizer status [--workspace <directory>]\nMp3Organizer analyze --limit N [--online|--offline] [--codex|--no-codex] [--write-tags] [--workspace <directory>]\nMp3Organizer reset-file <path> | reset-folder <path> | reset-errors | reset-review | reset-progress | reset-all\nMp3Organizer analyze <source> [--reports <directory>]\nMp3Organizer identify <source> [--identify-all] [--online|--offline]\nMp3Organizer resolve <source> [--only-unresolved] [--edit-manual]\nMp3Organizer doctor [--offline] [--workspace <directory>] [--cache <path>]\nMp3Organizer manual validate\nMp3Organizer plan <source> <target>\nMp3Organizer apply <source> <target> [--plan <copy-plan.json>] [--dry-run]\nMp3Organizer playlists <target>\nShared: --workspace <directory> (default workspace), --reports <directory>\nIdentification: --cache <cache.db>, --rebuild-fingerprints, --refresh-identification (requires --online), --identification-retry-days <days> (default 30).\nOnline identification is opt-in. Incremental --online enables Codex reasoning unless --no-codex. Configure OPENAI_API_KEY and MP3ORGANIZER_CODEX_MODEL. Only explicit --write-tags allows verified MP3 tag edits; audio is never re-encoded.");
+    private static void Help() => Console.WriteLine("My Media paths: plan/run --filesystem-naming unicode|ascii (Unicode default).\nValidate: validate-playlists <target>\nOutput layout: output-layout folders|albums --workspace <path> (existing review controls retained)\nNormal workflow: scan <source>, then run --online --workspace <directory>\nMp3Organizer run [--online|--offline] [--workspace <directory>] [--target <directory>] [--reports <directory>] [--codex|--no-codex] [--write-tags] [--limit N]\nMp3Organizer scan <source> [--force] [--workspace <directory>]\nMp3Organizer review [--workspace <directory>] [--write-tags]\nMp3Organizer status [--workspace <directory>]\nMp3Organizer analyze --limit N [--online|--offline] [--codex|--no-codex] [--write-tags] [--workspace <directory>]\nMp3Organizer reset-file <path> | reset-folder <path> | reset-errors | reset-review | reset-progress | reset-all\nMp3Organizer analyze <source> [--reports <directory>]\nMp3Organizer identify <source> [--identify-all] [--online|--offline]\nMp3Organizer resolve <source> [--only-unresolved] [--edit-manual]\nMp3Organizer doctor [--offline] [--workspace <directory>] [--cache <path>]\nMp3Organizer manual validate\nMp3Organizer plan <source> <target>\nMp3Organizer apply <source> <target> [--plan <copy-plan.json>] [--dry-run]\nMp3Organizer playlists <target>\nShared: --workspace <directory> (default workspace), --reports <directory>\nIdentification: --cache <cache.db>, --rebuild-fingerprints, --refresh-identification (requires --online), --identification-retry-days <days> (default 30).\nOnline identification is opt-in. Incremental --online enables Codex reasoning unless --no-codex. Configure OPENAI_API_KEY and MP3ORGANIZER_CODEX_MODEL. Only explicit --write-tags allows verified MP3 tag edits; audio is never re-encoded.");
 }

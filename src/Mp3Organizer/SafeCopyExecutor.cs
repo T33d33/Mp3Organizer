@@ -7,21 +7,21 @@ public sealed class SafeCopyExecutor
     public void Execute(CopyPlan plan, string source, string target, bool dryRun)
     {
         new CopyPlanValidator().Validate(plan, source, target);
-        if (dryRun) return;
+        if (dryRun) { TargetTagWriter.Describe(plan,Console.WriteLine); return; }
         PathSafetyGuard.Writable(target, source);
         Directory.CreateDirectory(target);
         // Mark ownership before the first copy so an interrupted run can be replanned safely.
         var old = ManagedTarget.Check(target, source);
         if (old == null)
         {
-            new M3u8Writer().WriteNew(Path.Combine(target, ManagedTarget.Marker), JsonFormat.Serialize(new ManagedTargetState(1, source, new(),KeepSourceFolders:plan.KeepSourceFolders)), source);
+            new M3u8Writer().WriteNew(Path.Combine(target, ManagedTarget.Marker), JsonFormat.Serialize(new ManagedTargetState(1, source, new(),KeepSourceFolders:plan.KeepSourceFolders,FileSystemNaming:plan.FileSystemNaming)), source);
             new M3u8Writer().WriteNew(Path.Combine(target, "playlist-map.json"), JsonFormat.Serialize(plan.PlaylistMap), source);
         }
         foreach (var op in plan.Operations.Where(x => x.Action == "Copy"))
         {
             var destination = PathSafetyGuard.Destination(target, op.RelativePath, source);
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-            var temporary = destination + ".partial-" + Guid.NewGuid().ToString("N");
+            var temporary = destination + ".partial-" + Guid.NewGuid().ToString("N") + op.Metadata.Extension;
             PathSafetyGuard.Writable(temporary, source);
             // Open source without write/delete sharing; recheck hash during the copy.
             using (var input = new ReadOnlySource().OpenRead(op.Metadata.FullPath))
@@ -32,6 +32,8 @@ public sealed class SafeCopyExecutor
                 output.Position = 0;
                 if (output.Length != op.Metadata.Size || Convert.ToHexString(SHA256.HashData(output)) != op.Metadata.Sha256) throw new IOException("Copy verification failed; partial target retained for inspection.");
             }
+            var verified=TargetTagWriter.WriteTemporary(temporary,source,op.Metadata,op.TagChanges);
+            plan.TargetMetadata[op.RelativePath]=verified;
             PathSafetyGuard.Writable(destination, source);
             PathSafetyGuard.Writable(temporary, source);
             File.Move(temporary, destination, false);
@@ -74,7 +76,7 @@ public sealed class ManagedPlaylistWriter
         }
         var legacy=PathSafetyGuard.Destination(target,"_Playlist-Folder",source);
         if(migrated.Count>0&&Directory.Exists(legacy)&&!Directory.EnumerateFileSystemEntries(legacy).Any())Directory.Delete(legacy,false);
-        Replace(ManagedTarget.Marker, JsonFormat.Serialize(new ManagedTargetState(1, source, state.Playlists.Where(x=>!migrated.Contains(x)).Concat(playlists.Select(x => x.RelativePath)).Distinct(StringComparer.OrdinalIgnoreCase).ToList(), true, state.MetadataManaged || metadata != null,state.KeepSourceFolders)));
+        Replace(ManagedTarget.Marker, JsonFormat.Serialize(new ManagedTargetState(1, source, state.Playlists.Where(x=>!migrated.Contains(x)).Concat(playlists.Select(x => x.RelativePath)).Distinct(StringComparer.OrdinalIgnoreCase).ToList(), true, state.MetadataManaged || metadata != null,state.KeepSourceFolders,state.FileSystemNaming)));
         void Replace(string relative, string content)
         {
             var path = PathSafetyGuard.Destination(target, relative, source);

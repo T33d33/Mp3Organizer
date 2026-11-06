@@ -1,6 +1,6 @@
 # Folder playlists and metadata policy migration
 
-Use `artifacts-repair-any-folder/Mp3Organizer.dll`. The normal workflow remains:
+Use `artifacts-track-repair/Mp3Organizer.dll`. The normal workflow remains:
 
 ```powershell
 dotnet $dll scan 'E:\Mp3-Ai-test' --workspace 'E:\Mp3-Ai-test-workspace'

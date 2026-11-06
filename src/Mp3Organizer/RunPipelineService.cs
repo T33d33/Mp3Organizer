@@ -22,13 +22,15 @@ public sealed class RunPipelineService(ProgressRepository repository,string work
         foreach(var pair in targets)repository.SetRunTarget(pair.Key,pair.Value);
         return targets;
     }
-    public int ApplyReady(IReadOnlyDictionary<string,string> targets,string reports,Action<string>? progress=null)
+    public int ApplyReady(IReadOnlyDictionary<string,string> targets,string reports,Action<string>? progress=null,string? filesystemNaming=null)
     {
         progress?.Invoke("Preparing apply: checking metadata policy and confirmed album years...");
         MetadataPolicy.Migrate(repository,workspace,progress);
         ErrorCount=0;var count=0;var yearCorrections=new AlbumYearCorrectionService(repository,workspace);yearCorrections.Propagate();
         foreach(var pair in targets.OrderBy(x=>x.Key,StringComparer.OrdinalIgnoreCase))
         {
+            var state=ManagedTarget.Check(pair.Value,pair.Key);
+            if(filesystemNaming!=null&&state!=null&&state.FileSystemNaming!=new FileSystemNaming(filesystemNaming).Mode)throw new IOException("Naming mode differs; use a fresh workspace and target.");
             progress?.Invoke("Checking album corrections: "+pair.Value);
             yearCorrections.Reconcile(pair.Key,pair.Value,progress);
             var ready=new List<IndexedMusic>();
@@ -53,7 +55,7 @@ public sealed class RunPipelineService(ProgressRepository repository,string work
             if(ready.Count==0&&!repository.Folders().Any(x=>x.SourceRoot.Equals(pair.Key,StringComparison.OrdinalIgnoreCase)))continue;
             progress?.Invoke($"Planning {ready.Count} Ready files -> {pair.Value}");
             var manual=new ManualResolutionStore(workspace,pair.Key,pair.Value);manual.Load();var revision=manual.Revision();
-            var plan=new CopyPlanBuilder().Build(pair.Key,pair.Value,progress:progress,readyInventory:ready.Select(x=>x.Effective).ToList(),workspace:workspace);
+            var plan=new CopyPlanBuilder().Build(pair.Key,pair.Value,progress:progress,readyInventory:ready.Select(x=>x.Effective).ToList(),workspace:workspace,filesystemNaming:filesystemNaming);
             if(revision!=manual.Revision())throw new IOException("Manual resolutions changed during run; retry run.");
             plan.ManualFilePath=manual.FilePath;plan.ManualFileRevision=revision;
             var saved=new CopyPlanStore().Save(plan,reports);new CsvReportWriter().Write(Path.GetDirectoryName(saved)!,pair.Key,plan.Library,plan);
@@ -67,7 +69,7 @@ public sealed class RunPipelineService(ProgressRepository repository,string work
                 // SHA-identical duplicates are fulfilled by the selected, verified target copy.
                 if(!handled.Contains(item.Basic.Sha256))continue;
                 var operation=plan.KeepSourceFolders?plan.Operations.Single(x=>x.Metadata.FullPath.Equals(item.CurrentPath,StringComparison.OrdinalIgnoreCase)):plan.Operations.First(x=>x.Metadata.Sha256==item.Basic.Sha256);
-                repository.MapCanonical(item,pair.Value,operation.RelativePath,operation.Metadata);
+                repository.MapCanonical(item,pair.Value,operation.RelativePath,plan.TargetMetadata.GetValueOrDefault(operation.RelativePath)??operation.Metadata);
                 repository.Save(item with{Status=ProcessingStatus.Processed,LastProcessedUtc=DateTime.UtcNow.ToString("O"),ErrorMessage=""},"Run applied validated plan "+plan.PlanId);
                 count++;progress?.Invoke("Processed: "+item.CurrentPath);
             }

@@ -15,6 +15,10 @@ public sealed class CsvReportWriter
         if (plan != null) new M3u8Writer().WriteNew(Path.Combine(folder, PlaylistIndexBuilder.FileName), new PlaylistIndexBuilder().Csv(plan.PlaylistMap, plan.Playlists), source);
         new IdentificationReportWriter().Write(folder,source,rows);
         string AlbumCode(string owner, string albumKey) => plan != null && plan.PlaylistMap.Artists.TryGetValue(owner, out var artist) && artist.Albums.TryGetValue(albumKey, out var album) ? PlaylistNames.AlbumCode(artist, album) : "";
+        if(plan!=null) {
+            Save("target-tag-changes.csv",["Source","Target","Field","Before","After","Provenance"],plan.Operations.SelectMany(op=>op.TagChanges.Select(c=>new object?[]{op.Metadata.FullPath,Path.Combine(plan.Target,op.RelativePath),c.Field,c.Before,c.After,c.Provenance})));
+            Save("path-transformations.csv",["Source","OriginalRelativePath","TargetRelativePath","Mode"],plan.Operations.Select(op=>new object?[]{op.Metadata.FullPath,op.OriginalRelativePath,op.RelativePath,plan.FileSystemNaming}));
+        }
         if (plan != null) Save("copy-plan.csv", ["Source", "Target", "Action", "SHA256", "Reason"], plan.Operations.Select(x => new object?[] { x.Metadata.FullPath, Path.Combine(plan.Target, x.RelativePath), x.Action, x.Metadata.Sha256, "" }).Concat(plan.Duplicates.Where(x => x.Decision == "SkipEquivalent").Select(x => new object?[] { x.Source, "", x.Decision, "", x.Reason })));
         void Save(string name, string[] header, IEnumerable<object?[]> data)
         {

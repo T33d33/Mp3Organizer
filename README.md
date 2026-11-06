@@ -332,3 +332,7 @@ Alternatively, from PowerShell in the project folder:
 ```
 
 This opens Album Artist, Album and optional Year for the selected folder, even if already Processed or previously corrected. Only direct files are included; child folders and permanently ignored tracks are excluded. Track titles, artists, numbers and processing status are preserved. Enter keeps a suggested field; /clear clears; /back returns to the previous field; /cancel or /q exits without saving. Confirm the album summary to save, then run **04.Apply-Reviewed.cmd** to update organized copies and playlists. The soundtrack repair launcher remains available for inherited decisions across its existing scope.
+
+### Repair individual tracks, including already processed files
+
+Run Repair-Folder-Tracks.cmd and paste the original source folder containing the audio files. Only direct files are listed. N proposes Artist/Title/Track from the original filename; M edits those three fields; Enter at the main menu keeps the track unchanged and moves on; /q stops. Confirm the proposal with Enter/YES to save it. Album Artist/Album/Year remain unchanged. Run 04.Apply-Reviewed.cmd afterwards to rename managed output copies and regenerate managed playlists. Original source files are not renamed or retagged. Conflicting corrections for a shared duplicate output stop apply rather than choosing one silently.

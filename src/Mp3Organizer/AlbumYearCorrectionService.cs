@@ -38,7 +38,7 @@ public sealed class AlbumYearCorrectionService(ProgressRepository repository,str
             var metadata=JsonFormat.Read<Dictionary<string,AudioMetadata>>(File.ReadAllText(manifestFile));
             var rows=repository.All().ToDictionary(x=>x.Id);
             foreach(var mapping in repository.Mappings(target))
-                if(rows.TryGetValue(mapping.FileId,out var row)&&row.Status==ProcessingStatus.Processed&&metadata.ContainsKey(mapping.RelativePath))metadata[mapping.RelativePath]=row.Effective;
+                if(rows.TryGetValue(mapping.FileId,out var row)&&row.Status==ProcessingStatus.Processed&&metadata.ContainsKey(mapping.RelativePath))metadata[mapping.RelativePath]=row.Effective with {Sha256=metadata[mapping.RelativePath].Sha256,Size=metadata[mapping.RelativePath].Size,SourceSha256=row.Basic.Sha256,SourceSize=row.Basic.Size};
             var folderMap=new PlaylistMapStore().Load(target);
             var folderLists=new PlaylistBuilder().Build(metadata.Select(x=>new CopyOperation(x.Value,x.Key,"Existing")).ToList(),folderMap);
             FolderPlaylistService.PreserveExisting(target,folderLists);PlaylistBuilder.IncludeRetired(folderLists,state);
@@ -71,10 +71,17 @@ public sealed class AlbumYearCorrectionService(ProgressRepository repository,str
                 }
                 if(MetadataQualityEvaluator.InvalidAlbum(old.Album)&&Shared("Album",x=>x.Album) is {} album)corrected=corrected with{Album=album};
                 if((MetadataQualityEvaluator.Invalid(old.AlbumArtist)||Shared("AlbumArtist",x=>x.AlbumArtist)=="Various Artists")&&Shared("AlbumArtist",x=>x.AlbumArtist) is {} owner)corrected=corrected with{AlbumArtist=owner};
+                var trackRepairs=matches.Where(x=>x.Effective.Identification?.FieldSources.GetValueOrDefault("TrackRepair")=="FileManualOverride").Select(x=>x.Effective).ToList();
+                if(trackRepairs.Count>0)
+                {
+                    var approved=trackRepairs[0];
+                    if(matches.Any(x=>x.Effective.Artist!=approved.Artist||x.Effective.Title!=approved.Title||x.Effective.Track!=approved.Track))throw new IOException("Shared output has conflicting track corrections: "+group.Key);
+                    corrected=corrected with{Artist=approved.Artist,TrackArtists=approved.TrackArtists,Title=approved.Title,Track=approved.Track,ExplicitlyConfirmedTitle=approved.ExplicitlyConfirmedTitle,Identification=approved.Identification};
+                }
                 if(corrected==old)continue;
                 // Preserve the existing filename, including collision suffixes. Only replace the album directory.
-                var desired=Path.Combine(Path.GetDirectoryName(TargetPathBuilder.Build(corrected))!,Path.GetFileName(group.Key));
-                if(!desired.Equals(group.Key,StringComparison.OrdinalIgnoreCase))moves.Add(new(group.Key,desired,corrected));
+                var desired=trackRepairs.Count>0?new FileSystemNaming(state.FileSystemNaming).RelativePath(TargetPathBuilder.Build(corrected)):Path.Combine(Path.GetDirectoryName(new FileSystemNaming(state.FileSystemNaming).RelativePath(TargetPathBuilder.Build(corrected)))!,Path.GetFileName(group.Key));
+                if(trackRepairs.Count>0||!desired.Equals(group.Key,StringComparison.OrdinalIgnoreCase))moves.Add(new(group.Key,desired,corrected));
             }
             if(moves.Count==0)return;
             // Album decisions can merge directories whose filenames were unique only
@@ -85,6 +92,7 @@ public sealed class AlbumYearCorrectionService(ProgressRepository repository,str
             for(var i=0;i<moves.Count;i++)
             {
                 var move=moves[i];var chosen=move.NewPath;
+                if(move.OldPath.Equals(chosen,StringComparison.OrdinalIgnoreCase))continue;
                 if(reserved.Contains(chosen))
                 {
                     var directory=Path.GetDirectoryName(chosen)!;var stem=Path.GetFileNameWithoutExtension(chosen);var extension=Path.GetExtension(chosen);var number=2;
@@ -98,14 +106,14 @@ public sealed class AlbumYearCorrectionService(ProgressRepository repository,str
             {
                 Verify(move.OldPath,move.Metadata);
                 var destination=PathSafetyGuard.Destination(target,move.NewPath,source);
-                if(File.Exists(destination)||Directory.Exists(destination))throw new IOException("Album year correction conflict; destination already exists: "+destination);
+                if(!move.OldPath.Equals(move.NewPath,StringComparison.OrdinalIgnoreCase)&&(File.Exists(destination)||Directory.Exists(destination)))throw new IOException("Album year correction conflict; destination already exists: "+destination);
             }
             new M3u8Writer().WriteNew(journal,JsonFormat.Serialize(moves),source);
         }
         foreach(var move in moves)
         {
             var old=PathSafetyGuard.Destination(target,move.OldPath,source);var next=PathSafetyGuard.Destination(target,move.NewPath,source);
-            if(File.Exists(old))
+            if(!old.Equals(next,StringComparison.OrdinalIgnoreCase)&&File.Exists(old))
             {
                 Verify(move.OldPath,move.Metadata);if(File.Exists(next)||Directory.Exists(next))throw new IOException("Album correction collision: "+next);
                 Directory.CreateDirectory(Path.GetDirectoryName(next)!);File.Move(old,next,false);

@@ -2,6 +2,8 @@ namespace Mp3Organizer;
 
 public sealed record AudioMetadata
 {
+    public string SourceSha256 {get;init;}="";
+    public long SourceSize {get;init;}
     public string? ExplicitlyConfirmedTitle {get;init;}
     public bool ConfirmedLooseTrack {get;init;}
     public string[] SuppressedAutomaticFields {get;init;}=[];
@@ -32,7 +34,9 @@ public sealed record AudioMetadata
     public IdentificationEvidence? Identification { get; init; }
 }
 public sealed record DuplicateDecision(string GroupId, string Source, string Decision, string Reason);
-public sealed record CopyOperation(AudioMetadata Metadata, string RelativePath, string Action);
+public sealed record TagChange(string Field, string Before, string After, string Provenance);
+public sealed record CopyOperation(AudioMetadata Metadata, string RelativePath, string Action)
+{ public List<TagChange> TagChanges {get;init;}=[]; public string OriginalRelativePath {get;init;}=""; }
 public sealed record PlaylistDefinition(string RelativePath, string Content);
 public sealed class ArtistIdentity
 {
@@ -54,6 +58,7 @@ public sealed class PlaylistMap
 }
 public sealed class CopyPlan
 {
+    public string FileSystemNaming {get;set;}="unicode";
     public bool SelectedInventoryOnly {get;set;}
     public bool KeepSourceFolders {get;set;}
     public string ProgressWorkspace {get;set;}="";

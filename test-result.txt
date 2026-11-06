@@ -1,10 +1,12 @@
+PASS ProcessedTrackRepairRenamesAndUpdatesPlaylists
+PASS ArtistTrackTitleAlbumFilenamePreservesFields
 PASS GeneralFolderRepairPreservesTracksAndScope
 PASS FolderActionsKeepChildrenActiveAndFStrict
 PASS FinishFolderCleansControlCharactersAndContinuesLongFields
 PASS GenericFinishIsSeparateAndDirectOnly
 PASS PermanentFolderExclusionSurvivesScanAndRestart
 PASS ExplicitManualTitleOverridesPlaceholderHeuristic
-LOOKUP BENCHMARK (201 tracks, 20 reads): full inventory 53,9 ms; direct 0,6 ms.
+LOOKUP BENCHMARK (201 tracks, 20 reads): full inventory 70,4 ms; direct 0,7 ms.
 PASS DirectReviewLookupAndChangedAlbumScope
 PASS NumberedFilenameTitlesSaveWithEnterAndFinish
 PASS PaddedOutputNamesCollapseWithoutTruncation
@@ -20,8 +22,8 @@ FOLDER-PRESERVING MODE — one directory at a time. Existing organizer and revie
 Copies retain their filenames and tags. Covers/tracklists are included. Subfolders and original playlist files are excluded; a new folder playlist is generated.
 /q = cancel.
 
-Source: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\fb73a093ca8a496f9335551dc6d761fa\source
-Destination: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\fb73a093ca8a496f9335551dc6d761fa\target-fresh\Album
+Source: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\0833e302a67c4cd391a257c7670d1552\source
+Destination: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\0833e302a67c4cd391a257c7670d1552\target-fresh\Album
 Audio: test.wav
 Audio files: 1; extras: 0; child folders excluded: 0
 Playlist: _Folder.m3u8
@@ -70,11 +72,11 @@ PASS GuidedReviewCompilationAndNumericTitle
 PASS GuidedReviewWithoutCandidatesUsesDefaults
 PASS GuidedReviewBackPreservesEditedValues
 PASS GuidedReviewChoicesPlaybackAndQuit
-Reading changed/new file: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\03067e7b6b9643a28a7c8b5d362c4fb9\source\Cuphead OST\45 - The Airship.mp3
-Reading changed/new file: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\03067e7b6b9643a28a7c8b5d362c4fb9\source\Cuphead OST\55 - Winner Takes All.mp3
-Reading changed/new file: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\03067e7b6b9643a28a7c8b5d362c4fb9\source\synthetic.mp3
-Reading changed/new file: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\03067e7b6b9643a28a7c8b5d362c4fb9\source\test.wav
-PL-0001: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\03067e7b6b9643a28a7c8b5d362c4fb9\source\Playlists\Cuphead OST.m3u8 (3 entries; 0 unresolved references)
+Reading changed/new file: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\8df573509ed74a728c183d49f2e9f264\source\Cuphead OST\45 - The Airship.mp3
+Reading changed/new file: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\8df573509ed74a728c183d49f2e9f264\source\Cuphead OST\55 - Winner Takes All.mp3
+Reading changed/new file: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\8df573509ed74a728c183d49f2e9f264\source\synthetic.mp3
+Reading changed/new file: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\8df573509ed74a728c183d49f2e9f264\source\test.wav
+PL-0001: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\8df573509ed74a728c183d49f2e9f264\source\Playlists\Cuphead OST.m3u8 (3 entries; 0 unresolved references)
 Added: 4
 Updated: 0
 Unchanged: 0
@@ -83,18 +85,18 @@ Online lookup disabled: --offline requested
 Codex reasoning disabled (offline or explicit configuration; deterministic analysis only).
 Analyzed this batch: 0
 [00:00:00] Preparing apply: checking metadata policy and confirmed album years...
-[00:00:00] Checking album corrections: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\03067e7b6b9643a28a7c8b5d362c4fb9\target
+[00:00:00] Checking album corrections: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\8df573509ed74a728c183d49f2e9f264\target
 [00:00:00] Verifying 2 Ready source files before planning...
-[00:00:00] Planning 2 Ready files -> C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\03067e7b6b9643a28a7c8b5d362c4fb9\target
+[00:00:00] Planning 2 Ready files -> C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\8df573509ed74a728c183d49f2e9f264\target
 [00:00:00] Scanning source and reading metadata/SHA-256...
 [00:00:00] Calculating duplicates, target paths and playlists...
-[00:00:00] Saved plan: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\03067e7b6b9643a28a7c8b5d362c4fb9\reports\persistent-workspace\reports\6995046a55184393b2b0474785d9db39\copy-plan.json
-[00:00:00] Processed: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\03067e7b6b9643a28a7c8b5d362c4fb9\source\Cuphead OST\45 - The Airship.mp3
-[00:00:00] Processed: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\03067e7b6b9643a28a7c8b5d362c4fb9\source\Cuphead OST\55 - Winner Takes All.mp3
+[00:00:00] Saved plan: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\8df573509ed74a728c183d49f2e9f264\reports\persistent-workspace\reports\41fb139825404de49574091139e70322\copy-plan.json
+[00:00:00] Processed: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\8df573509ed74a728c183d49f2e9f264\source\Cuphead OST\45 - The Airship.mp3
+[00:00:00] Processed: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\8df573509ed74a728c183d49f2e9f264\source\Cuphead OST\55 - Winner Takes All.mp3
 [00:00:00] FOLDER-0001 - source: 0 playable occurrences; 2 pending/review/error/skipped or unavailable.
 [00:00:00] FOLDER-0002 - Cuphead OST: 2 playable occurrences; 0 pending/review/error/skipped or unavailable.
 [00:00:00] PL-0001 - Cuphead OST: entries 3; migrated 3; awaiting review 0; pending/error 0; missing/unresolved 0
-[00:00:00] Playlist import report: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\03067e7b6b9643a28a7c8b5d362c4fb9\reports\persistent-workspace\playlist-import-reports\20261102-232407-3796480-6f8febfcf4914c8b9e9372895c777330.csv
+[00:00:00] Playlist import report: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\8df573509ed74a728c183d49f2e9f264\reports\persistent-workspace\playlist-import-reports\20261105-141911-1933991-f9f81d41eabd4c26b088c3593920ca5f.csv
 Processed this run: 2
 Total files: 4
 Processed: 2
@@ -142,27 +144,27 @@ PASS FolderDuplicateOccurrencesAndCanonicalReuse
 PASS FolderNewScanIdAndCrossRunDeduplication
 PASS FolderRegeneratesOrderWithoutCopying
 PASS FolderPendingInsertAndRemovedMembership
-Reading changed/new file: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\2980719e5c6d477ebfb5480b4397e5aa\source\Added Album\01 - Test Song.wav
+Reading changed/new file: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\b0f56a5046df435f9d9cbd1cacc98277\source\Added Album\01 - Test Song.wav
 Added: 1
 Updated: 0
 Unchanged: 1
 Scan errors: 0
 Online lookup disabled: --offline requested
 Codex reasoning disabled (offline or explicit configuration; deterministic analysis only).
-[00:00:00] Analyzing [1/1]: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\2980719e5c6d477ebfb5480b4397e5aa\source\Added Album\01 - Test Song.wav
+[00:00:00] Analyzing [1/1]: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\b0f56a5046df435f9d9cbd1cacc98277\source\Added Album\01 - Test Song.wav
 [00:00:00] Resolution: evaluating metadata
 LLM: disabled by configuration/offline mode (no API request)
-[00:00:00] Ready: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\2980719e5c6d477ebfb5480b4397e5aa\source\Added Album\01 - Test Song.wav
+[00:00:00] Ready: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\b0f56a5046df435f9d9cbd1cacc98277\source\Added Album\01 - Test Song.wav
 Analyzed this batch: 1
 [00:00:00] Preparing apply: checking metadata policy and confirmed album years...
-[00:00:00] Checking album corrections: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\2980719e5c6d477ebfb5480b4397e5aa\target
+[00:00:00] Checking album corrections: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\b0f56a5046df435f9d9cbd1cacc98277\target
 [00:00:00] Verifying 2 Ready source files before planning...
-[00:00:00] Planning 2 Ready files -> C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\2980719e5c6d477ebfb5480b4397e5aa\target
+[00:00:00] Planning 2 Ready files -> C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\b0f56a5046df435f9d9cbd1cacc98277\target
 [00:00:00] Scanning source and reading metadata/SHA-256...
 [00:00:00] Calculating duplicates, target paths and playlists...
-[00:00:00] Saved plan: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\2980719e5c6d477ebfb5480b4397e5aa\reports\persistent-workspace\reports\7c2a2651d37b45a8b27003509ecb0032\copy-plan.json
-[00:00:00] Processed: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\2980719e5c6d477ebfb5480b4397e5aa\source\Added Album\01 - Test Song.wav
-[00:00:00] Processed: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\2980719e5c6d477ebfb5480b4397e5aa\source\test.wav
+[00:00:00] Saved plan: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\b0f56a5046df435f9d9cbd1cacc98277\reports\persistent-workspace\reports\dbf8f59a8b6a4a048992a10d3fdafb99\copy-plan.json
+[00:00:00] Processed: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\b0f56a5046df435f9d9cbd1cacc98277\source\Added Album\01 - Test Song.wav
+[00:00:00] Processed: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\b0f56a5046df435f9d9cbd1cacc98277\source\test.wav
 [00:00:00] FOLDER-0001 - source: 1 playable occurrences; 0 pending/review/error/skipped or unavailable.
 [00:00:00] FOLDER-0002 - Added Album: 1 playable occurrences; 0 pending/review/error/skipped or unavailable.
 Processed this run: 2
@@ -198,13 +200,13 @@ Online lookup disabled: --offline requested
 Codex reasoning disabled (offline or explicit configuration; deterministic analysis only).
 Analyzed this batch: 0
 [00:00:00] Preparing apply: checking metadata policy and confirmed album years...
-[00:00:00] Checking album corrections: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\6d76e0335dbd4eb5b4a6252ba4ea6d28\target
+[00:00:00] Checking album corrections: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\9b3dfa05f1cb41cd8eeb27cbbb4322a8\target
 [00:00:00] Verifying 1 Ready source files before planning...
-[00:00:00] Planning 1 Ready files -> C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\6d76e0335dbd4eb5b4a6252ba4ea6d28\target
+[00:00:00] Planning 1 Ready files -> C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\9b3dfa05f1cb41cd8eeb27cbbb4322a8\target
 [00:00:00] Scanning source and reading metadata/SHA-256...
 [00:00:00] Calculating duplicates, target paths and playlists...
-[00:00:00] Saved plan: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\6d76e0335dbd4eb5b4a6252ba4ea6d28\reports\persistent-workspace\reports\878cbf9bb71848cebac917e6e62832a9\copy-plan.json
-[00:00:00] Processed: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\6d76e0335dbd4eb5b4a6252ba4ea6d28\source\test.wav
+[00:00:00] Saved plan: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\9b3dfa05f1cb41cd8eeb27cbbb4322a8\reports\persistent-workspace\reports\3e15294b8a5c4198becf871f62bdaec7\copy-plan.json
+[00:00:00] Processed: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\9b3dfa05f1cb41cd8eeb27cbbb4322a8\source\test.wav
 [00:00:00] FOLDER-0001 - source: 1 playable occurrences; 0 pending/review/error/skipped or unavailable.
 Processed this run: 1
 Total files: 1
@@ -237,13 +239,13 @@ Online lookup disabled: --offline requested
 Codex reasoning disabled (offline or explicit configuration; deterministic analysis only).
 Analyzed this batch: 0
 [00:00:00] Preparing apply: checking metadata policy and confirmed album years...
-[00:00:00] Checking album corrections: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\038b003cdc994401a3f1645458cf595b\target
+[00:00:00] Checking album corrections: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\2687d3843c784278a8ee50ad71bd3b35\target
 [00:00:00] Verifying 1 Ready source files before planning...
-[00:00:00] Planning 1 Ready files -> C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\038b003cdc994401a3f1645458cf595b\target
+[00:00:00] Planning 1 Ready files -> C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\2687d3843c784278a8ee50ad71bd3b35\target
 [00:00:00] Scanning source and reading metadata/SHA-256...
 [00:00:00] Calculating duplicates, target paths and playlists...
-[00:00:00] Saved plan: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\038b003cdc994401a3f1645458cf595b\reports\persistent-workspace\reports\9c4aac80aaff44958e5d0321a4eb5682\copy-plan.json
-[00:00:00] Processed: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\038b003cdc994401a3f1645458cf595b\source\test.wav
+[00:00:00] Saved plan: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\2687d3843c784278a8ee50ad71bd3b35\reports\persistent-workspace\reports\9435679539f8402994c56b61089e5626\copy-plan.json
+[00:00:00] Processed: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\2687d3843c784278a8ee50ad71bd3b35\source\test.wav
 [00:00:00] FOLDER-0001 - source: 2 playable occurrences; 3 pending/review/error/skipped or unavailable.
 Processed this run: 1
 Total files: 5
@@ -274,13 +276,13 @@ Online lookup disabled: --offline requested
 Codex reasoning disabled (offline or explicit configuration; deterministic analysis only).
 Analyzed this batch: 0
 [00:00:00] Preparing apply: checking metadata policy and confirmed album years...
-[00:00:00] Checking album corrections: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\038b003cdc994401a3f1645458cf595b\target
+[00:00:00] Checking album corrections: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\2687d3843c784278a8ee50ad71bd3b35\target
 [00:00:00] Checking saved album decisions against organized files...
 [00:00:00] Verifying 0 Ready source files before planning...
-[00:00:00] Planning 0 Ready files -> C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\038b003cdc994401a3f1645458cf595b\target
+[00:00:00] Planning 0 Ready files -> C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\2687d3843c784278a8ee50ad71bd3b35\target
 [00:00:00] Scanning source and reading metadata/SHA-256...
 [00:00:00] Calculating duplicates, target paths and playlists...
-[00:00:00] Saved plan: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\038b003cdc994401a3f1645458cf595b\reports\persistent-workspace\reports\0669fd03c4a447b08f174792c93741a0\copy-plan.json
+[00:00:00] Saved plan: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\2687d3843c784278a8ee50ad71bd3b35\reports\persistent-workspace\reports\0adca80f5acc4d4c98c36129e610349e\copy-plan.json
 [00:00:00] FOLDER-0001 - source: 2 playable occurrences; 3 pending/review/error/skipped or unavailable.
 Processed this run: 0
 Total files: 5
@@ -308,25 +310,25 @@ LLM needs review:    0
 LLM unavailable:     0
 Deterministic only:  0
 PASS RunExistingReadyAndBlockedStates
-Reading changed/new file: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\2160dc816a5a4de0864b257cf3ab093c\source\test.wav
+Reading changed/new file: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\dbe50eaa2c0b41839e77342cc60985ab\source\test.wav
 Added: 1
 Updated: 0
 Unchanged: 0
 Scan errors: 0
 Online lookup disabled: --offline requested
 Codex reasoning disabled (offline or explicit configuration; deterministic analysis only).
-[00:00:00] Analyzing [1/1]: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\2160dc816a5a4de0864b257cf3ab093c\source\test.wav
+[00:00:00] Analyzing [1/1]: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\dbe50eaa2c0b41839e77342cc60985ab\source\test.wav
 LLM: disabled by configuration/offline mode (no API request)
-[00:00:00] Ready: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\2160dc816a5a4de0864b257cf3ab093c\source\test.wav
+[00:00:00] Ready: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\dbe50eaa2c0b41839e77342cc60985ab\source\test.wav
 Analyzed this batch: 1
 [00:00:00] Preparing apply: checking metadata policy and confirmed album years...
-[00:00:00] Checking album corrections: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\2160dc816a5a4de0864b257cf3ab093c\source-organized
+[00:00:00] Checking album corrections: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\dbe50eaa2c0b41839e77342cc60985ab\source-organized
 [00:00:00] Verifying 1 Ready source files before planning...
-[00:00:00] Planning 1 Ready files -> C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\2160dc816a5a4de0864b257cf3ab093c\source-organized
+[00:00:00] Planning 1 Ready files -> C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\dbe50eaa2c0b41839e77342cc60985ab\source-organized
 [00:00:00] Scanning source and reading metadata/SHA-256...
 [00:00:00] Calculating duplicates, target paths and playlists...
-[00:00:00] Saved plan: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\2160dc816a5a4de0864b257cf3ab093c\reports\persistent-workspace\reports\7a51b0af4609469392f74c0f4c166b8a\copy-plan.json
-[00:00:00] Processed: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\2160dc816a5a4de0864b257cf3ab093c\source\test.wav
+[00:00:00] Saved plan: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\dbe50eaa2c0b41839e77342cc60985ab\reports\persistent-workspace\reports\1d59d94b20f64d27b600443e87e62ae3\copy-plan.json
+[00:00:00] Processed: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\dbe50eaa2c0b41839e77342cc60985ab\source\test.wav
 [00:00:00] FOLDER-0001 - source: 1 playable occurrences; 0 pending/review/error/skipped or unavailable.
 Processed this run: 1
 Total files: 1
@@ -353,26 +355,26 @@ LLM resolved:        0
 LLM needs review:    0
 LLM unavailable:     0
 Deterministic only:  1
-Reading changed/new file: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\2160dc816a5a4de0864b257cf3ab093c\source\Album C\Disc 1\new.wav
+Reading changed/new file: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\dbe50eaa2c0b41839e77342cc60985ab\source\Album C\Disc 1\new.wav
 Added: 1
 Updated: 0
 Unchanged: 1
 Scan errors: 0
 Online lookup disabled: --offline requested
 Codex reasoning disabled (offline or explicit configuration; deterministic analysis only).
-[00:00:00] Analyzing [1/1]: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\2160dc816a5a4de0864b257cf3ab093c\source\Album C\Disc 1\new.wav
+[00:00:00] Analyzing [1/1]: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\dbe50eaa2c0b41839e77342cc60985ab\source\Album C\Disc 1\new.wav
 LLM: disabled by configuration/offline mode (no API request)
-[00:00:00] Ready: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\2160dc816a5a4de0864b257cf3ab093c\source\Album C\Disc 1\new.wav
+[00:00:00] Ready: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\dbe50eaa2c0b41839e77342cc60985ab\source\Album C\Disc 1\new.wav
 Analyzed this batch: 1
 [00:00:00] Preparing apply: checking metadata policy and confirmed album years...
-[00:00:00] Checking album corrections: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\2160dc816a5a4de0864b257cf3ab093c\source-organized
+[00:00:00] Checking album corrections: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\dbe50eaa2c0b41839e77342cc60985ab\source-organized
 [00:00:00] Checking saved album decisions against organized files...
 [00:00:00] Verifying 1 Ready source files before planning...
-[00:00:00] Planning 1 Ready files -> C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\2160dc816a5a4de0864b257cf3ab093c\source-organized
+[00:00:00] Planning 1 Ready files -> C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\dbe50eaa2c0b41839e77342cc60985ab\source-organized
 [00:00:00] Scanning source and reading metadata/SHA-256...
 [00:00:00] Calculating duplicates, target paths and playlists...
-[00:00:00] Saved plan: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\2160dc816a5a4de0864b257cf3ab093c\reports\persistent-workspace\reports\836186a9c55f4885be001dcd059224ef\copy-plan.json
-[00:00:00] Processed: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\2160dc816a5a4de0864b257cf3ab093c\source\Album C\Disc 1\new.wav
+[00:00:00] Saved plan: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\dbe50eaa2c0b41839e77342cc60985ab\reports\persistent-workspace\reports\067bbd8f3b3540ab9c708c9cc973a3f3\copy-plan.json
+[00:00:00] Processed: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\dbe50eaa2c0b41839e77342cc60985ab\source\Album C\Disc 1\new.wav
 [00:00:00] FOLDER-0001 - source: 1 playable occurrences; 0 pending/review/error/skipped or unavailable.
 [00:00:00] FOLDER-0002 - Disc 1: 1 playable occurrences; 0 pending/review/error/skipped or unavailable.
 Processed this run: 1
@@ -434,17 +436,17 @@ PASS ProgressErrorsAndReviewReset
 PASS ProgressBackupBeforeReset
 PASS ProgressRenameIdentityAndDuplicates
 PASS ProgressEachFileCommitted
-Reading changed/new file: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\24dcc623abe9492bb6aed5addcce9675\source\test.wav
+Reading changed/new file: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\d25b7bde765b4ea586d7cc7d81045bf4\source\test.wav
 Added: 1
 Updated: 0
 Unchanged: 0
 Scan errors: 0
 Online lookup disabled: --online not specified (online lookup is opt-in)
 Codex reasoning disabled (offline or explicit configuration; deterministic analysis only).
-[00:00:00] Analyzing [1/1]: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\24dcc623abe9492bb6aed5addcce9675\source\test.wav
+[00:00:00] Analyzing [1/1]: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\d25b7bde765b4ea586d7cc7d81045bf4\source\test.wav
 [00:00:00] Resolution: evaluating metadata
 LLM: disabled by configuration/offline mode (no API request)
-[00:00:00] NeedsReview: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\24dcc623abe9492bb6aed5addcce9675\source\test.wav
+[00:00:00] NeedsReview: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\d25b7bde765b4ea586d7cc7d81045bf4\source\test.wav
 Analyzed this batch: 1
 Total files: 1
 Processed: 0
@@ -569,8 +571,8 @@ PASS PlanTamperRejected
 PASS TargetCollisionPreserved
 PASS PlaylistUtf8AndRelative
 PASS CsvEscaping
-[00:00:00] Scanning folders: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\6a6ab5cd005c49bba871938bd48375e0\target
-[00:00:00] Scanning: 0 audio files found; C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\6a6ab5cd005c49bba871938bd48375e0\target
+[00:00:00] Scanning folders: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\762a3fc08254435fb7d4119c8593986a\target
+[00:00:00] Scanning: 0 audio files found; C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\762a3fc08254435fb7d4119c8593986a\target
 [00:00:00] Scan complete: 1 audio files; 0 warnings.
 [00:00:00] Reading metadata and SHA-256 [1/1]: 00 - Test Song.wav
 [00:00:00] Metadata complete: 1 files.
@@ -594,8 +596,8 @@ PASS SourcePathAliasesRejected
 PASS ScannerExtensions
 Online lookup disabled: --online not specified (online lookup is opt-in)
 Full-source mode uses deterministic identification. For runtime Codex reasoning and resumable batches, use scan then analyze --limit N --online.
-[00:00:00] Scanning folders: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\87822309e76744d88f6919c41832387a\source
-[00:00:00] Scanning: 0 audio files found; C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\87822309e76744d88f6919c41832387a\source
+[00:00:00] Scanning folders: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\5fa57239cad9411cb9774cdd27f7883f\source
+[00:00:00] Scanning: 0 audio files found; C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\5fa57239cad9411cb9774cdd27f7883f\source
 [00:00:00] Scan complete: 1 audio files; 0 warnings.
 [00:00:00] Reading metadata and SHA-256 [1/1]: test.wav
 [00:00:00] Metadata complete: 1 files.
@@ -614,7 +616,7 @@ Loose tracks: 0
 Possible duplicate groups: 0
 Metadata read errors: 0
 Scan warnings: 0
-Reports: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\87822309e76744d88f6919c41832387a\reports\analysis-45082854f9054f439495a9db1c431c8d
+Reports: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\5fa57239cad9411cb9774cdd27f7883f\reports\analysis-f32a1dc9fa864d0cb81a15b9a8c5b2d5
 Identification review: 0
 Online lookup disabled: --online not specified (online lookup is opt-in)
 Full-source mode uses deterministic identification. For runtime Codex reasoning and resumable batches, use scan then analyze --limit N --online.
@@ -638,19 +640,19 @@ Copy: 1
 Already present: 0
 Playlists: 2
 Blocking conflicts: 0
-Saved plan: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\87822309e76744d88f6919c41832387a\reports\bec207fb223746d79b0b65ff0efc73eb\copy-plan.json
+Saved plan: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\5fa57239cad9411cb9774cdd27f7883f\reports\767d2625cd9c4cf3acee4596bed19409\copy-plan.json
 Dry run validated: 1 copies and 2 playlists. No files written.
 Apply completed; source untouched. Managed playlist replacements were backed up.
 PASS CliWorkflow
 PASS IndexStableCodesAndNumericOrder
-[00:00:00] Scanning folders: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\3a2fbdcadcec4f14928632b5a1f84481\target
-[00:00:00] Scanning: 0 audio files found; C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\3a2fbdcadcec4f14928632b5a1f84481\target
+[00:00:00] Scanning folders: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\bdddd408e2624579ae386d9b1729ebea\target
+[00:00:00] Scanning: 0 audio files found; C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\bdddd408e2624579ae386d9b1729ebea\target
 [00:00:00] Scan complete: 1 audio files; 0 warnings.
 [00:00:00] Reading metadata and SHA-256 [1/1]: 00 - Test Song.wav
 [00:00:00] Metadata complete: 1 files.
 Generated 2 playlists; managed replacements are backed up.
-[00:00:00] Scanning folders: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\3a2fbdcadcec4f14928632b5a1f84481\target
-[00:00:00] Scanning: 0 audio files found; C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\3a2fbdcadcec4f14928632b5a1f84481\target
+[00:00:00] Scanning folders: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\bdddd408e2624579ae386d9b1729ebea\target
+[00:00:00] Scanning: 0 audio files found; C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\bdddd408e2624579ae386d9b1729ebea\target
 [00:00:00] Scan complete: 1 audio files; 0 warnings.
 [00:00:00] Reading metadata and SHA-256 [1/1]: 00 - Test Song.wav
 [00:00:00] Metadata complete: 1 files.
@@ -658,8 +660,8 @@ Generated 2 playlists; managed replacements are backed up.
 PASS IndexRegenerationPreservesMapping
 PASS IndexAlbumReportCode
 PASS IndexCompilationAndUtf8
-[00:00:00] Scanning folders: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\9a9e0b452fa540028ff15a81bd6e032a\target
-[00:00:00] Scanning: 0 audio files found; C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\9a9e0b452fa540028ff15a81bd6e032a\target
+[00:00:00] Scanning folders: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\e57fa0748e024e4493c596ceef6e2981\target
+[00:00:00] Scanning: 0 audio files found; C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\e57fa0748e024e4493c596ceef6e2981\target
 [00:00:00] Scan complete: 1 audio files; 0 warnings.
 [00:00:00] Reading metadata and SHA-256 [1/1]: 00 - Test Song.wav
 [00:00:00] Metadata complete: 1 files.
@@ -688,8 +690,8 @@ PASS HttpMalformedResponse
 PASS HttpMusicBrainzFailure
 PASS RecordingIdentityDuplicates
 PASS ResolutionSourceImmutable
-[00:00:00] Scanning folders: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\e0278a42118f4cd0a3f9f88bbab2a3b7\target
-[00:00:00] Scanning: 0 audio files found; C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\e0278a42118f4cd0a3f9f88bbab2a3b7\target
+[00:00:00] Scanning folders: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\45cc990da80b4dabaaf1cc68762b5e14\target
+[00:00:00] Scanning: 0 audio files found; C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\45cc990da80b4dabaaf1cc68762b5e14\target
 [00:00:00] Scan complete: 1 audio files; 0 warnings.
 [00:00:00] Reading metadata and SHA-256 [1/1]: 00 - Test Song.wav
 [00:00:00] Metadata complete: 1 files.
@@ -699,8 +701,8 @@ PASS IdentificationReportFields
 PASS IdentificationCacheSafety
 Online lookup disabled: --offline requested
 Full-source mode uses deterministic identification. For runtime Codex reasoning and resumable batches, use scan then analyze --limit N --online.
-[00:00:00] Scanning folders: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\a1d767fb31e145f3ad0f452f4e668b7e\source
-[00:00:00] Scanning: 0 audio files found; C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\a1d767fb31e145f3ad0f452f4e668b7e\source
+[00:00:00] Scanning folders: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\9e7440c279614885930a3faeac73b909\source
+[00:00:00] Scanning: 0 audio files found; C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\9e7440c279614885930a3faeac73b909\source
 [00:00:00] Scan complete: 1 audio files; 0 warnings.
 [00:00:00] Reading metadata and SHA-256 [1/1]: test.wav
 [00:00:00] Metadata complete: 1 files.
@@ -719,7 +721,7 @@ Loose tracks: 0
 Possible duplicate groups: 0
 Metadata read errors: 0
 Scan warnings: 0
-Reports: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\a1d767fb31e145f3ad0f452f4e668b7e\reports\identification-fa96375d4a7248dfab61948b9f08911a
+Reports: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\9e7440c279614885930a3faeac73b909\reports\identification-effbe624567442928c053fdf54d31d84
 Identification review: 0
 PASS IdentifyOfflineCli
 PASS ResolutionCacheReusedOffline
@@ -754,8 +756,8 @@ PASS ManualConcurrentEditRefused
 PASS ManualValidationReferences
 PASS ManualSourceImmutable
 PASS ManualStalePlanRejected
-[00:00:00] Scanning folders: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\85e49dfb3cbd4c05b4fedebe09429494\target
-[00:00:00] Scanning: 0 audio files found; C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e\85e49dfb3cbd4c05b4fedebe09429494\target
+[00:00:00] Scanning folders: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\0358241441244d909750516add4ce38d\target
+[00:00:00] Scanning: 0 audio files found; C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c\0358241441244d909750516add4ce38d\target
 [00:00:00] Scan complete: 1 audio files; 0 warnings.
 [00:00:00] Reading metadata and SHA-256 [1/1]: 00 - Test Song.wav
 [00:00:00] Metadata complete: 1 files.
@@ -775,4 +777,4 @@ PASS ManualAcceptsUtf8Bom
 PASS AutomaticNegativeResultPersistence
 PASS SqlitePersistenceAcrossProcesses
 PASS LegacyFingerprintImport
-RESULT: 280 passed, 0 failed, 280 total. Synthetic fixtures: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-dda9c36b778e
+RESULT: 282 passed, 0 failed, 282 total. Synthetic fixtures: C:\Users\tglaz\Documents\Codex\2026-09-26\build-the-first-read-only-version\work\test-runs\mp3tests-48c78e6d019c
